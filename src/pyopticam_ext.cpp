@@ -54,6 +54,25 @@ NB_MODULE(pyopticam_ext, m) {
 
         return nb::tensor<nb::numpy, float>(data, 2, shape, /* owner = */ deleter);
     });
+    
+
+    m.def("test_optitrack", []() {
+        //float *data = new float[8] { 1, 2, 3, 4, 
+        //                             5, 6, 7, 8 };
+        //size_t shape[2] = { 2, 4 };
+
+        ///// Delete 'data' when the 'deleter' capsule expires
+        //nb::capsule deleter(data, [](void *p) {
+        //    delete[] (float *) p;
+        //});
+
+        //return nb::tensor<nb::numpy, float>(data, 2, shape, /* owner = */ deleter);
+
+        CameraList cameras;
+        CameraManager::X().GetCameraList(cameras);
+        return cameras.Count();
+
+    });
 
     nb::class_<Frame>(m, "Frame")
         .def(nb::init())
@@ -299,7 +318,7 @@ NB_MODULE(pyopticam_ext, m) {
 
     nb::class_<CameraManager>(m, "CameraManager")
         //.def(nb::init())
-        .def("X", CameraManager::X)
+        .def_static("X", CameraManager::X, nb::rv_policy::reference)
         .def("WaitForInitialization", &CameraManager::WaitForInitialization)
         .def("AreCamerasInitialized", &CameraManager::AreCamerasInitialized)
         .def("AreCamerasShutdown", &CameraManager::AreCamerasShutdown)
@@ -317,7 +336,7 @@ NB_MODULE(pyopticam_ext, m) {
         .def("ResetTimeStamp", &CameraManager::ResetTimeStamp)
         .def("RegisterListener", &CameraManager::RegisterListener)
         .def("UnregisterListener", &CameraManager::UnregisterListener)
-        .def("CameraFactory", &CameraManager::CameraFactory)
+        .def_static("CameraFactory", CameraManager::CameraFactory)
         .def("AddCamera", &CameraManager::AddCamera)
         .def("RemoveCamera", &CameraManager::RemoveCamera)
         .def("RemoveVirtualCameras", &CameraManager::RemoveVirtualCameras)
@@ -334,9 +353,9 @@ NB_MODULE(pyopticam_ext, m) {
         .def("ShouldForceCameraRateControls", &CameraManager::ShouldForceCameraRateControls)
         .def("ShouldApplySyncOnExposureChange", &CameraManager::ShouldApplySyncOnExposureChange)
         .def("SuggestCameraIDOrder", &CameraManager::SuggestCameraIDOrder)
-        .def("DestroyInstance", &CameraManager::DestroyInstance)
-        .def("IsActive", &CameraManager::IsActive)
-        .def("Ptr", &CameraManager::Ptr)
+        .def_static("DestroyInstance", CameraManager::DestroyInstance)
+        .def_static("IsActive", CameraManager::IsActive)
+        .def_static("Ptr", CameraManager::Ptr)
         ;
 
     nb::class_<CameraEntry>(m, "CameraEntry")
