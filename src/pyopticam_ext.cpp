@@ -31,7 +31,9 @@ NB_MODULE(pyopticam_ext, m) {
         );
     });
 
-    m.def("process", [](nb::tensor<uint8_t, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu> tensor) {
+    m.def("process", [](nb::tensor<
+                            uint8_t, nb::shape<nb::any, nb::any, 3>, 
+                            nb::c_contig, nb::device::cpu> tensor) {
         // Double brightness of the MxNx3 RGB image
         for (size_t y = 0; y < tensor.shape(0); ++y){
             for (size_t x = 0; y < tensor.shape(1); ++x){
@@ -55,24 +57,92 @@ NB_MODULE(pyopticam_ext, m) {
         return nb::tensor<nb::numpy, float>(data, 2, shape, /* owner = */ deleter);
     });
     
-
-    m.def("test_optitrack", []() {
-        //float *data = new float[8] { 1, 2, 3, 4, 
-        //                             5, 6, 7, 8 };
-        //size_t shape[2] = { 2, 4 };
-
-        ///// Delete 'data' when the 'deleter' capsule expires
-        //nb::capsule deleter(data, [](void *p) {
-        //    delete[] (float *) p;
-        //});
-
-        //return nb::tensor<nb::numpy, float>(data, 2, shape, /* owner = */ deleter);
-
+    // Had to define this custom since I'm not sure
+    // how reference return functions work in nanobind
+    m.def("GetCameraList", [](CameraManager& manager) {
         CameraList cameras;
-        CameraManager::X().GetCameraList(cameras);
-        return cameras.Count();
+        //CameraManager::X()
+        //manager.GetCameraList(cameras);
+        return cameras;
+    });//, nb::rv_policy::reference);
 
+    //m.def("GetCameraFrame", [](int serial) {
+    //    Camera* camera = CameraManager::X().GetCameraBySerial(serial);
+    //    Frame* frame = camera->GetFrame();
+    //    return frame;
+    //});
+
+    //m.def("GetCameraFrame", [](int serial) {
+    //    Camera* camera = CameraManager::X().GetCameraBySerial(serial);
+    //    Frame* frame = camera->GetFrame();
+
+    //    printf("Optitrack Image Buffer Size : %p\n", frame->GetGrayscaleDataSize());
+    //    printf("Optitrack Image Is Grayscale : %p\n", frame->IsGrayscale());
+    //    uint8_t *data = frame->GetGrayscaleData();
+
+    //    size_t shape[2] = { frame->Height(), frame->Width() };
+
+    //    /// Delete 'data' when the 'deleter' capsule expires
+    //    nb::capsule deleter(data, [](void *p) {
+    //        delete[] (uint8_t *) p;
+    //    });
+
+    //    return nb::tensor<nb::numpy, uint8_t>(data, 2, shape, /* owner = */ deleter);
+    //});
+
+    m.def("GetCameraFrame", [](Frame* frame) {
+        printf("[INFO] Optitrack Image Buffer Size : %i\n", frame->GetGrayscaleDataSize());
+        printf("[INFO] Optitrack Image Is Grayscale : %i\n", frame->IsGrayscale());
+        uint8_t *data = frame->GetGrayscaleData();
+        printf("[INFO] Retrieved Data...");
+        size_t shape[2] = { frame->Height(), frame->Width() };
+
+        /// Delete 'data' when the 'deleter' capsule expires
+        //nb::capsule deleter(data, [](void *p) {
+        //    delete[] (uint8_t *) p;
+        //});
+        printf("[INFO] Defined Deleter");
+        auto tensor = nb::tensor<nb::numpy, uint8_t>(data, 2, shape);//, /* owner = */ deleter);
+        printf("[INFO] Defined Tensor, returning!");
+        return tensor;
     });
+
+    nb::enum_<Core::eVideoMode>(m, "eVideoMode")
+        .value("SegmentMode"  , Core::eVideoMode::SegmentMode)
+        .value("GrayscaleMode", Core::eVideoMode::GrayscaleMode)
+        .value("ObjectMode", Core::eVideoMode::ObjectMode)
+        .value("InterleavedGrayscaleMode", Core::eVideoMode::InterleavedGrayscaleMode)
+        .value("PrecisionMode", Core::eVideoMode::PrecisionMode)
+        .value("BitPackedPrecisionMode", Core::eVideoMode::BitPackedPrecisionMode)
+        .value("MJPEGMode", Core::eVideoMode::MJPEGMode)
+        .value("VideoMode", Core::eVideoMode::VideoMode)
+        .value("SynchronizationTelemetry", Core::eVideoMode::SynchronizationTelemetry)
+        .value("VideoModeCount", Core::eVideoMode::VideoModeCount)
+        .value("UnknownMode", Core::eVideoMode::UnknownMode);
+        //.export_values();
+
+    nb::enum_<CameraLibrary::eCameraState>(m, "eCameraState")
+        .value("Uninitialized"  , CameraLibrary::eCameraState::Uninitialized)
+        .value("InitializingDevice", CameraLibrary::eCameraState::InitializingDevice)
+        .value("InitializingCamera", CameraLibrary::eCameraState::InitializingCamera)
+        .value("Initializing", CameraLibrary::eCameraState::Initializing)
+        .value("WaitingForChildDevices", CameraLibrary::eCameraState::WaitingForChildDevices)
+        .value("WaitingForDeviceInitialization", CameraLibrary::eCameraState::WaitingForDeviceInitialization)
+        .value("Initialized", CameraLibrary::eCameraState::Initialized)
+        .value("Disconnected", CameraLibrary::eCameraState::Disconnected)
+        .value("Shutdown", CameraLibrary::eCameraState::Shutdown);
+
+    nb::class_<sStatusLightColor>(m, "sStatusLightColor")
+        .def(nb::init())
+        .def_readwrite("Red", &sStatusLightColor::Red)
+        .def_readwrite("Green", &sStatusLightColor::Green)
+        .def_readwrite("Blue", &sStatusLightColor::Blue);
+
+    nb::class_<cCameraLibraryStartupSettings>(m, "cCameraLibraryStartupSettings")
+        .def(nb::init())
+        .def("X", cCameraLibraryStartupSettings::X)
+        .def("EnableDevelopment", &cCameraLibraryStartupSettings::EnableDevelopment)
+        .def("IsDevelopmentEnabled", &cCameraLibraryStartupSettings::IsDevelopmentEnabled);
 
     nb::class_<Frame>(m, "Frame")
         .def(nb::init())
@@ -121,10 +191,10 @@ NB_MODULE(pyopticam_ext, m) {
 
     nb::class_<Camera>(m, "Camera")
         .def(nb::init())
-        .def("Width", &Camera::Width)
-        .def("Height", &Camera::Height)
+        //.def("Width", &Camera::Width)
+        //.def("Height", &Camera::Height)
         .def("GetFrame", &Camera::GetFrame)
-        //.def("Name", &Camera::Name)
+        .def("Name", &Camera::Name)
         .def("Start", &Camera::Start)
         .def("Stop", &Camera::Stop)
         .def("IsCameraRunning", &Camera::IsCameraRunning)
@@ -137,6 +207,7 @@ NB_MODULE(pyopticam_ext, m) {
         .def("SetShutterDelay", &Camera::SetShutterDelay) // Virtual
         .def("SetStrobeOffset", &Camera::SetStrobeOffset) // Virtual
         .def("SetFrameRate", &Camera::SetFrameRate) // Virtual
+        .def("FrameRate", &Camera::FrameRate) // Virtual
         .def("SetFrameDecimation", &Camera::SetFrameDecimation) // Virtual
         .def("FrameDecimation", &Camera::FrameDecimation) // Virtual
         .def("GrayscaleDecimation", &Camera::GrayscaleDecimation)
@@ -146,9 +217,9 @@ NB_MODULE(pyopticam_ext, m) {
         .def("Exposure", &Camera::Exposure)
         .def("Threshold", &Camera::Threshold)
         .def("Intensity", &Camera::Intensity) // Virtual
-        .def("SetVideoType", &Camera::SetVideoType) // Virtual
-        .def("IsVideoTypeSupported", &Camera::IsVideoTypeSupported) // Virtual
-        .def("IsVideoTypeSynchronous", &Camera::IsVideoTypeSynchronous) // Virtual
+        .def("SetVideoType", &Camera::SetVideoType) // Virtual // Uses Enum
+        .def("IsVideoTypeSupported", &Camera::IsVideoTypeSupported) // Virtual // Uses Enum
+        .def("IsVideoTypeSynchronous", &Camera::IsVideoTypeSynchronous) // Virtual // Uses Enum
         .def("DataRate", &Camera::DataRate)
         .def("PacketSize", &Camera::PacketSize)
         .def("SetGrayscaleDecimation", &Camera::SetGrayscaleDecimation)
@@ -156,8 +227,8 @@ NB_MODULE(pyopticam_ext, m) {
         .def("SendInvalidFrames", &Camera::SendInvalidFrames)
         .def("SetLateDecompression", &Camera::SetLateDecompression)
         .def("LateDecompression", &Camera::LateDecompression)
-        //.def("Serial", &Camera::Serial)
-        //.def("SerialString", &Camera::SerialString)
+        .def("Serial", &Camera::Serial)
+        .def("SerialString", &Camera::SerialString)
         .def("Model", &Camera::Model)
         .def("SubModel", &Camera::SubModel)
         .def("Revision", &Camera::Revision)
@@ -173,10 +244,10 @@ NB_MODULE(pyopticam_ext, m) {
         .def("SetAEC", &Camera::SetAEC)
         .def("AEC", &Camera::AEC)
         .def("IsAECAvailable", &Camera::IsAECAvailable) // Virtual
-        .def("SetImagerGain", &Camera::SetImagerGain)
-        .def("ImagerGain", &Camera::ImagerGain)
-        .def("IsImagerGainAvailable", &Camera::IsImagerGainAvailable) // Virtual
-        .def("ImagerGainLevels", &Camera::ImagerGainLevels) // Virtual
+        .def("SetImagerGain", &Camera::SetImagerGain) // Uses Enum
+        .def("ImagerGain", &Camera::ImagerGain) // Uses Enum
+        .def("IsImagerGainAvailable", &Camera::IsImagerGainAvailable) // Virtual Uses Enum
+        .def("ImagerGainLevels", &Camera::ImagerGainLevels) // Virtual Uses Enum
         .def("SetHighPowerMode", &Camera::SetHighPowerMode) // Virtual
         .def("HighPowerMode", &Camera::HighPowerMode) // Virtual
         .def("IsHighPowerModeAvailable", &Camera::IsHighPowerModeAvailable) // Virtual
@@ -194,7 +265,7 @@ NB_MODULE(pyopticam_ext, m) {
         .def("QuietMode", &Camera::QuietMode)
         .def("SetRinglightEnabledWhileStopped", &Camera::SetRinglightEnabledWhileStopped) // Virtual
         .def("RinglightEnabledWhileStopped", &Camera::RinglightEnabledWhileStopped) // Virtual
-        .def("IsHardwareFiltered", &Camera::IsHardwareFiltered) // Virtual
+        .def("IsHardwareFiltered", &Camera::IsHardwareFiltered) // Virtual, Uses Enum
         .def("SwitchState", &Camera::SwitchState)
         .def("Health", &Camera::Health)
         .def("GetDistortionModel", &Camera::GetDistortionModel) // Virtual
@@ -202,8 +273,8 @@ NB_MODULE(pyopticam_ext, m) {
         .def("SetWindow", &Camera::SetWindow) // Virtual
         .def("IsWindowingSupported", &Camera::IsWindowingSupported) // Virtual
         .def("CalcWindow", &Camera::CalcWindow) // Virtual
-        .def("SetLED", &Camera::SetLED)
-        .def("SetAllLED", &Camera::SetAllLED)
+        .def("SetLED", &Camera::SetLED) // Uses Enum
+        .def("SetAllLED", &Camera::SetAllLED) // Uses Enum
         .def("SetStatusIntensity", &Camera::SetStatusIntensity)
         .def("StatusRingLightCount", &Camera::StatusRingLightCount) // Virtual
         .def("SetStatusRingLights", &Camera::SetStatusRingLights) // Virtual
@@ -264,7 +335,7 @@ NB_MODULE(pyopticam_ext, m) {
         .def("SetObjectColor", &Camera::SetObjectColor)
         .def("ObjectColor", &Camera::ObjectColor)
         .def("SetGrayscaleFloor", &Camera::SetGrayscaleFloor) // Virtual
-        .def("FrameSize", &Camera::FrameSize) // Virtual
+        //.def("FrameSize", &Camera::FrameSize) // Virtual
 
         .def("SetEnablePayload", &Camera::SetEnablePayload) // Virtual
         .def("IsEnablePayload", &Camera::IsEnablePayload) // Virtual
@@ -275,9 +346,9 @@ NB_MODULE(pyopticam_ext, m) {
         .def("IsCameraFanSpeedValid", &Camera::IsCameraFanSpeedValid) // Virtual
         .def("CameraFanSpeed", &Camera::CameraFanSpeed) // Virtual
         .def("IsPoEPlusActive", &Camera::IsPoEPlusActive) // Virtual
-        .def("SetLLDPDetection", &Camera::SetLLDPDetection)
-        .def("IsLLDPDetectionAvaiable", &Camera::IsLLDPDetectionAvaiable) // Virtual
-        .def("LLDPDetection", &Camera::LLDPDetection)
+        .def("SetLLDPDetection", &Camera::SetLLDPDetection) // Uses Enum
+        .def("IsLLDPDetectionAvaiable", &Camera::IsLLDPDetectionAvaiable) // Virtual  // Uses Enum
+        .def("LLDPDetection", &Camera::LLDPDetection) // Uses Enum
         .def("MinimumExposureValue", &Camera::MinimumExposureValue) // Virtual
         .def("MaximumExposureValue", &Camera::MaximumExposureValue) // Virtual
         .def("MinimumFrameRateValue", &Camera::MinimumFrameRateValue) // Virtual
@@ -291,7 +362,7 @@ NB_MODULE(pyopticam_ext, m) {
         //.def("SetParameter", &Camera::SetParameter)// Overloads!
         //.def("SetParameter", &Camera::SetParameter) // Virtual
         .def("StorageMaxSize", &Camera::StorageMaxSize) // Virtual
-        //.def("LoadFile", &Camera::LoadFile) // Virtual
+        //.def("LoadFile", &Camera::LoadFile) // Virtual, Overloads
         //.def("SaveFile", &Camera::SaveFile) // Virtual
         .def("OptiHubConnectivity", &Camera::OptiHubConnectivity) // Virtual
         .def("IsColor", &Camera::IsColor) // Virtual
@@ -324,7 +395,8 @@ NB_MODULE(pyopticam_ext, m) {
         .def("AreCamerasShutdown", &CameraManager::AreCamerasShutdown)
         .def("Shutdown", &CameraManager::Shutdown)
         .def("GetCameraBySerial", &CameraManager::GetCameraBySerial)
-        //.def("GetCamera", &CameraManager::GetCamera) // Overloads!
+        .def("GetCamera", nb::overload_cast<const Core::cUID&>(&CameraManager::GetCamera)) // Overloads!
+        .def("GetCamera", nb::overload_cast<>(&CameraManager::GetCamera)) // Overloads! , nb::rv_policy::reference
         //.def("GetCamera", &CameraManager::GetCamera)
         .def("GetCameraList", &CameraManager::GetCameraList)
         .def("GetHardwareKey", &CameraManager::GetHardwareKey)

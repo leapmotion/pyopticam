@@ -6,3 +6,6 @@ build
 *.pyd
 *.egg-info
 .vscode
+build
+cam
+*.png
