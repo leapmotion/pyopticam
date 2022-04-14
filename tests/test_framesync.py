@@ -49,9 +49,9 @@ for i in range(len(camera_array)):
      #color.Green = 255
      #color.Blue = 0
      #camera_array[i].SetStatusRingLights(10, color)
-     camera_array[i].SetStatusRingRGB(0, 255, 0)
+     #camera_array[i].SetStatusRingRGB(0, 255, 0)
 
-     print("Setting Grayscale Mode")
+     print("Setting MJPEG Mode")
      camera_array[i].SetVideoType(m.eVideoMode.MJPEGMode) # and GrayscaleMode work
      #camera_array[i].SetExposure(8000)
      #camera_array[i].SetThreshold(1)
@@ -72,14 +72,19 @@ for i in range(len(camera_array)):
      #print("Retrieved Frame!", image_frame.shape)
      #cv2.imwrite("CameraFrame"+str(i)+".png", image_frame)
 
+print("Starting to retrieve frame groups...")
+while(not (cv2.waitKey(4) & 0xFF == ord('q'))):
+    #print("Retrieving FrameGroup...")
+    image_frame = m.GetFrameGroupArray(sync)
+    #cv2.imshow("CameraFrame", image_frame[0])
+    image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
+    #for i in range(image_frame.shape[0]):
+    #    cv2.imshow("CameraFrame"+str(i), image_frame[i])
+    cv2.imshow("CameraFrame - " + str(i), image_frame)
 
-while(not (cv2.waitKey(2) & 0xFF == ord('q'))):
-    output = m.GetFrameGroupArray(sync, camera_array[0].Serial())
-    if output is not None:
-        image_frame = np.copy(output)
-        cv2.imshow("CameraFrame - " + str(i), image_frame)
-    else:
-        print("Huh.")
+
+    #else:
+    #    print("Huh.")
     #framegroup = sync.GetFrameGroup()
 #
     #if framegroup is not None:
@@ -111,6 +116,7 @@ for i in range(len(camera_array)):
         camera_array[i].Release()
         print("Released Camera!")
 
-cv2.destroyAllWindows()
+
 cameraManager.Shutdown()
+cv2.destroyAllWindows()
 #m.CameraManager.DestroyInstance()
