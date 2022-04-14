@@ -1,6 +1,13 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/tensor.h>
+#include <nanobind/stl/shared_ptr.h>
 #include <cameralibrary.h>
+
+#ifdef _WIN32
+    #include <Windows.h>
+#endif
+#include <iostream>
+#include <cstdlib>
 
 using namespace CameraLibrary;
 
@@ -31,18 +38,18 @@ NB_MODULE(pyopticam_ext, m) {
         );
     });
 
-    m.def("process", [](nb::tensor<
-                            uint8_t, nb::shape<nb::any, nb::any, 3>, 
-                            nb::c_contig, nb::device::cpu> tensor) {
-        // Double brightness of the MxNx3 RGB image
-        for (size_t y = 0; y < tensor.shape(0); ++y){
-            for (size_t x = 0; y < tensor.shape(1); ++x){
-                for (size_t ch = 0; ch < 3; ++ch){
-                    tensor(y, x, ch) = (uint8_t) std::min(255, tensor(y, x, ch) * 2);
-                }
-            }
-        }
-    });
+    //m.def("process", [](nb::tensor<
+    //                        uint8_t, nb::shape<nb::any, nb::any, 3>, 
+    //                        nb::c_contig, nb::device::cpu> tensor) {
+    //    // Double brightness of the MxNx3 RGB image
+    //    for (size_t y = 0; y < tensor.shape(0); ++y){
+    //        for (size_t x = 0; y < tensor.shape(1); ++x){
+    //            for (size_t ch = 0; ch < 3; ++ch){
+    //                tensor(y, x, ch) = (uint8_t) std::min(255, tensor(y, x, ch) * 2);
+    //            }
+    //        }
+    //    }
+    //});
 
     m.def("ret_numpy", []() {
         float *data = new float[8] { 1, 2, 3, 4, 
@@ -91,20 +98,114 @@ NB_MODULE(pyopticam_ext, m) {
     //});
 
     m.def("GetCameraFrame", [](Frame* frame) {
-        printf("[INFO] Optitrack Image Buffer Size : %i\n", frame->GetGrayscaleDataSize());
-        printf("[INFO] Optitrack Image Is Grayscale : %i\n", frame->IsGrayscale());
+        //printf("[INFO] Optitrack Image Buffer Size : %i\n", frame->GetGrayscaleDataSize());
+        //printf("[INFO] Optitrack Image Is Grayscale : %i\n", frame->IsGrayscale());
         uint8_t *data = frame->GetGrayscaleData();
-        printf("[INFO] Retrieved Data...");
+        //printf("[INFO] Retrieved Data...");
         size_t shape[2] = { frame->Height(), frame->Width() };
 
         /// Delete 'data' when the 'deleter' capsule expires
         //nb::capsule deleter(data, [](void *p) {
         //    delete[] (uint8_t *) p;
         //});
-        printf("[INFO] Defined Deleter");
+        //printf("[INFO] Defined Deleter");
         auto tensor = nb::tensor<nb::numpy, uint8_t>(data, 2, shape);//, /* owner = */ deleter);
-        printf("[INFO] Defined Tensor, returning!");
+        //printf("[INFO] Defined Tensor, returning!");
         return tensor;
+    });
+
+    m.def("CopyFrameToTensor", [](Frame* frame, nb::tensor<
+                                                    uint8_t, nb::shape<nb::any, nb::any>,
+                                                    nb::c_contig, nb::device::cpu> tensor) {
+        if (tensor.dtype() == nb::dtype<uint8_t>() &&
+            tensor.ndim() == 2 &&
+            tensor.shape(0) == frame -> Height() &&
+            tensor.shape(1) == frame -> Width()) 
+        {
+            uint8_t* data = frame->GetGrayscaleData();
+            size_t numBytes = frame->GetGrayscaleDataSize();
+            size_t dim1 = frame->Height();//tensor.shape(0);
+            size_t dim2 = frame->Width();//tensor.shape(1);
+
+            for (size_t y = 0; y < dim1; y++){
+                for (size_t x = 0; x < dim2; x++){
+                    size_t index = (y*dim1) + x;
+                    //if(index < numBytes){
+                        tensor(y, x) = data[index];
+                    //}
+                }
+            }
+        } else {
+            //printf("Tensor dimension: Expected : uint_8 and got %zu\n", tensor.dtype());
+            printf("Tensor Copy Failed!");
+            printf("Tensor dimension: Expected : 2 and got %zu\n", tensor.ndim());
+            printf("Tensor Height: Expected : %zu and got %zu\n", frame -> Height(), tensor.ndim());
+            printf("Tensor Width : Expected : %zu and got %zu\n", frame -> Width(), tensor.ndim());
+        }
+    });
+
+    m.def("UnpackFrameGroup", [](FrameGroup* frameGroup) {
+        if(frameGroup != nullptr){
+            for(int i = 0; i < frameGroup->Count(); i++){
+                printf("[INFO] About to get Frame: %i\n", i);
+                Frame* frame = frameGroup->GetFrame(i);
+                printf("[INFO] Frame Width: %i, Height: %i\n", frame->Width(), frame->Height());
+                frame->Release();
+            }
+        }else{
+            printf("[INFO] FrameGroup is Null!\n");
+        }
+        ////printf("[INFO] Optitrack Image Buffer Size : %i\n", frame->GetGrayscaleDataSize());
+        ////printf("[INFO] Optitrack Image Is Grayscale : %i\n", frame->IsGrayscale());
+        //uint8_t *data = frame->GetGrayscaleData();
+        ////printf("[INFO] Retrieved Data...");
+        //size_t shape[2] = { frame->Height(), frame->Width() };
+
+        ///// Delete 'data' when the 'deleter' capsule expires
+        ////nb::capsule deleter(data, [](void *p) {
+        ////    delete[] (uint8_t *) p;
+        ////});
+        ////printf("[INFO] Defined Deleter");
+        //auto tensor = nb::tensor<nb::numpy, uint8_t>(data, 2, shape);//, /* owner = */ deleter);
+        ////printf("[INFO] Defined Tensor, returning!");
+        //return tensor;
+    });
+
+    m.def("GetFrameGroupArray", [](cModuleSync* sync, int inSerial) {
+        FrameGroup* frameGroup = sync -> GetFrameGroup();
+        while(frameGroup == nullptr || frameGroup->Count() != 8){
+            //printf("[INFO] FrameGroup is Null!\n");
+            frameGroup = sync -> GetFrameGroup();
+            Sleep(5);
+        }
+    
+        if(frameGroup != nullptr && frameGroup->Count() == 8 ){
+            for(int i = 0; i < frameGroup->Count(); i++){
+                Frame* frame = frameGroup->GetFrame(i);
+                //printf("[INFO] Frame Width: %i, Height: %i\n", frame->Width(), frame->Height());
+                printf("[INFO] Retrieved Frame: %i\n", frame->FrameID());
+
+                if(inSerial == frame->GetCamera()->Serial()){
+                    uint8_t *data = frame->GetGrayscaleData();
+                    uint8_t* buffer = (uint8_t*) malloc (frame->GetGrayscaleDataSize());
+                    memcpy(buffer, data, frame->GetGrayscaleDataSize());
+
+                    size_t shape[2] = { frame->Height(), frame->Width() };
+                    /// Delete 'buffer' when the 'deleter' capsule expires
+                    nb::capsule deleter(buffer, [](void *p) { delete[] (uint8_t *) p; });
+                    nb::tensor<nb::numpy, uint8_t> tensor = nb::tensor<nb::numpy, uint8_t>(buffer, 2, shape, /* owner = */ deleter);
+                    frame->Release();
+
+                    frameGroup->Release();
+                    return tensor;
+                } else {
+                    //camera->Release();
+                    continue;
+                }
+            }
+            printf("[ERROR] FRAME GROUP DID NOT HAVE SPECIFIED SERIAL IN IT");
+            frameGroup->Release();
+        }
     });
 
     nb::enum_<Core::eVideoMode>(m, "eVideoMode")
@@ -138,9 +239,71 @@ NB_MODULE(pyopticam_ext, m) {
         .def_readwrite("Green", &sStatusLightColor::Green)
         .def_readwrite("Blue", &sStatusLightColor::Blue);
 
+    nb::class_<CameraLibrary::cModuleSyncBase>(m, "cModuleSyncBase")
+        .def("AddCamera", &CameraLibrary::cModuleSyncBase::AddCamera)
+        .def("CameraCount", &CameraLibrary::cModuleSyncBase::CameraCount)
+        .def("GetFrameGroup", &CameraLibrary::cModuleSyncBase::GetFrameGroup)
+        .def("LastFrameGroupMode", &CameraLibrary::cModuleSyncBase::LastFrameGroupMode)
+        .def("RemoveAllCameras", &CameraLibrary::cModuleSyncBase::RemoveAllCameras);
+
+    nb::class_<CameraLibrary::cModuleSync, CameraLibrary::cModuleSyncBase>(m, "cModuleSync")
+        //.def(nb::init())
+        //.def(nb::init_implicit<CameraLibrary::cModuleSyncBase>())
+        .def_static("Create", CameraLibrary::cModuleSync::Create, nb::rv_policy::reference)
+        .def_static("Destroy", CameraLibrary::cModuleSync::Destroy)
+        //.def("AddCamera", &CameraLibrary::cModuleSync::AddCamera)
+        //.def("CameraCount", &CameraLibrary::cModuleSync::CameraCount)
+        //.def("GetFrameGroup", &CameraLibrary::cModuleSync::GetFrameGroup)
+        //.def("GetFrameGroupSharedPtr", &CameraLibrary::cModuleSync::GetFrameGroupSharedPtr)
+        //.def("LastFrameGroupMode", &CameraLibrary::cModuleSync::LastFrameGroupMode)
+        //.def("RemoveAllCameras", &CameraLibrary::cModuleSync::RemoveAllCameras)
+        //.def("GetCamera", &cModuleSyncBase::GetCamera())
+        //.def("SetOptimization", &CameraLibrary::cModuleSync::SetOptimization())
+        //.def("Optimization", &CameraLibrary::cModuleSync::Optimization())
+        .def("PostFrame", &CameraLibrary::cModuleSync::PostFrame)
+        //.def("FlushFrames", &cModuleSync::FlushFrames)
+        .def("FrameDeliveryRate", &CameraLibrary::cModuleSync::FrameDeliveryRate) // Virtual
+        ;
+
+    nb::enum_<CameraLibrary::FrameGroup::Modes>(m, "Modes")
+        .value("None"  , CameraLibrary::FrameGroup::Modes::None)
+        .value("Software", CameraLibrary::FrameGroup::Modes::Software)
+        .value("Hardware", CameraLibrary::FrameGroup::Modes::Hardware)
+        .value("ModeCount", CameraLibrary::FrameGroup::Modes::ModeCount);
+
+    nb::class_<DroppedFrameInfo>(m, "DroppedFrameInfo")
+        //.def(nb::init())
+        .def("Serial", &DroppedFrameInfo::Serial)
+        .def("UserData", &DroppedFrameInfo::UserData);
+
+    nb::class_<FrameGroup>(m, "FrameGroup")
+        .def(nb::init())
+        .def("Count", &FrameGroup::Count)
+        .def("GetFrame", &FrameGroup::GetFrame, nb::rv_policy::reference)
+        .def("GetFrameUserData", &FrameGroup::GetFrameUserData)
+        .def("AddRef", &FrameGroup::AddRef)
+        .def("Release", &FrameGroup::Release)
+        .def("AddFrame", &FrameGroup::AddFrame)
+        .def("Clear", &FrameGroup::Clear)
+        .def("SetMode", &FrameGroup::SetMode)
+        .def("Mode", &FrameGroup::Mode)
+        .def("SetTimeStamp", &FrameGroup::SetTimeStamp)
+        .def("SetTimeSpread", &FrameGroup::SetTimeSpread)
+        .def("SetEarliestTimeStamp", &FrameGroup::SetEarliestTimeStamp)
+        .def("SetLatestTimeStamp", &FrameGroup::SetLatestTimeStamp)
+        .def("TimeSpread", &FrameGroup::TimeSpread)
+        .def("TimeStamp", &FrameGroup::TimeStamp)
+        .def("EarliestTimeStamp", &FrameGroup::EarliestTimeStamp)
+        .def("LatestTimeStamp", &FrameGroup::LatestTimeStamp)
+        .def("FrameID", &FrameGroup::FrameID)
+        .def("TimeSpreadDeviation", &FrameGroup::TimeSpreadDeviation)
+        .def("DroppedFrameCount", &FrameGroup::DroppedFrameCount)
+        .def("DroppedFrame", &FrameGroup::DroppedFrame)
+        ;
+
     nb::class_<cCameraLibraryStartupSettings>(m, "cCameraLibraryStartupSettings")
         .def(nb::init())
-        .def("X", cCameraLibraryStartupSettings::X)
+        .def_static("X", cCameraLibraryStartupSettings::X)
         .def("EnableDevelopment", &cCameraLibraryStartupSettings::EnableDevelopment)
         .def("IsDevelopmentEnabled", &cCameraLibraryStartupSettings::IsDevelopmentEnabled);
 
@@ -394,9 +557,9 @@ NB_MODULE(pyopticam_ext, m) {
         .def("AreCamerasInitialized", &CameraManager::AreCamerasInitialized)
         .def("AreCamerasShutdown", &CameraManager::AreCamerasShutdown)
         .def("Shutdown", &CameraManager::Shutdown)
-        .def("GetCameraBySerial", &CameraManager::GetCameraBySerial)
-        .def("GetCamera", nb::overload_cast<const Core::cUID&>(&CameraManager::GetCamera)) // Overloads!
-        .def("GetCamera", nb::overload_cast<>(&CameraManager::GetCamera)) // Overloads! , nb::rv_policy::reference
+        .def("GetCameraBySerial", &CameraManager::GetCameraBySerial, nb::rv_policy::reference)
+        .def("GetCamera", nb::overload_cast<const Core::cUID&>(&CameraManager::GetCamera), nb::rv_policy::reference) // Overloads!
+        .def("GetCamera", nb::overload_cast<>(&CameraManager::GetCamera), nb::rv_policy::reference) // Overloads! , nb::rv_policy::reference
         //.def("GetCamera", &CameraManager::GetCamera)
         .def("GetCameraList", &CameraManager::GetCameraList)
         .def("GetHardwareKey", &CameraManager::GetHardwareKey)
