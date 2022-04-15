@@ -2,7 +2,10 @@ import pyopticam as m
 import numpy as np
 import time
 import cv2
+import sys
+import subprocess
 import ctypes
+import mp4_thread
 
 #m.cCameraLibraryStartupSettings.X().EnableDevelopment()
 
@@ -43,22 +46,13 @@ for i in range(len(camera_array)):
      print("Camera", i, "Parameters: Name", camera_array[i].Name() , ", Framerate:", camera_array[i].FrameRate(), 
          ", Exposure:", camera_array[i].Exposure(),", Threshold:", camera_array[i].Threshold(), 
          ", Intensity:", camera_array[i].Intensity(),", CameraID:", camera_array[i].CameraID())
-
-     #color = m.sStatusLightColor()
-     #color.Red = 0
-     #color.Green = 255
-     #color.Blue = 0
-     #camera_array[i].SetStatusRingLights(10, color)
      camera_array[i].SetStatusRingRGB(0, 255, 0)
 
      print("Setting MJPEG Mode")
      camera_array[i].SetVideoType(m.eVideoMode.MJPEGMode) # and GrayscaleMode work
-     #camera_array[i].SetExposure(8000)
-     #camera_array[i].SetThreshold(1)
-     #camera_array[i].SetIntensity(15)
-     #time.sleep(0.5)
-     #print("Enabling Text Overlay...")
-     #camera_array[i].SetTextOverlay(True)
+     camera_array[i].SetExposure(250)
+     #camera_array[i].SetThreshold(150)
+     #camera_array[i].SetIntensity(5)
      print("Starting Camera...")
      camera_array[i].Start()
      #
@@ -72,13 +66,24 @@ for i in range(len(camera_array)):
      #print("Retrieved Frame!", image_frame.shape)
      #cv2.imwrite("CameraFrame"+str(i)+".png", image_frame)
 
+ffmpeg_process = mp4_thread.ffmpegThread("OptitrackOutput.mp4", width=640 / 4, height=512 * len(camera_array) / 4)
+ffmpeg_process.start()
+
 print("Starting to retrieve frame groups...")
 while(not (cv2.waitKey(4) & 0xFF == ord('q'))):
     #print("Retrieving FrameGroup...")
     image_frame = m.GetFrameGroupArray(sync)
-    #cv2.imshow("CameraFrame", image_frame[0])
     image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
-    cv2.imshow("CameraFrame - " + str(i), image_frame)
+    image_frame = cv2.resize(image_frame, (int(ffmpeg_process.width), int(ffmpeg_process.height)))
+    ffmpeg_process.add_image(np.copy(image_frame))
+    cv2.imshow("CameraFrame - " + str(i), np.copy(image_frame))
+
+    #if ffmpeg_process.num_frames_input % 100 == 0:
+    #    #print("Processed", ffmpeg_process.num_frames_input, "frames")
+    #    print("Images backed up in the FMMPEG Thread: ", len(ffmpeg_process.image_queue))
+
+print("Killing FFMPEG process...")
+ffmpeg_process.end_encoding()
 
 sync.RemoveAllCameras()
 m.cModuleSync.Destroy(sync)
@@ -94,3 +99,4 @@ for i in range(len(camera_array)):
 cameraManager.Shutdown()
 cv2.destroyAllWindows()
 #m.CameraManager.DestroyInstance()
+print("Fin!")

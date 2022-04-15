@@ -217,98 +217,69 @@ NB_MODULE(pyopticam_ext, m) {
         FrameGroup* frameGroup = sync -> GetFrameGroup();
         bool invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
         while(invalid_frame_group){
-            //printf("[INFO] FrameGroup is Null!\n");
-            printf("[INFO] Bad Framegroup; Sleeping...\n");
-            Sleep(2);
+            //printf("[INFO] Bad Framegroup; Sleeping...\n");
+            Sleep(1);
             frameGroup = sync -> GetFrameGroup();
             invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
 
-            if(invalid_frame_group){
-                if(frameGroup == nullptr){
-                    printf("[INFO] FrameGroup is Null!\n");
-                } else {
-                    printf("[INFO] FrameGroup has %i frames\n", frameGroup->Count());
-                }
-            }
+            //if(invalid_frame_group){
+            //    if(frameGroup == nullptr){
+            //        printf("[INFO] FrameGroup is Null!\n");
+            //    } else {
+            //        printf("[INFO] FrameGroup has %i frames\n", frameGroup->Count());
+            //    }
+            //}
         }
 
         size_t offset = 0;
         if(frameGroup != nullptr && frameGroup->Count() > 0 ){
             int count = frameGroup->Count();
-            //printf("[INFO] 1!\n");
-            //Frame* first_frame = frameGroup->GetFrame(0);
             uint8_t* full_buffer = nullptr;
             int height = 0, width = 0;
-            //first_frame->Release();
+            //unsigned int last_address = 0;
 
             for(int i = 0; i < count; i++){
-                //printf("[INFO] 2!\n");
                 Frame* frame = frameGroup->GetFrame(i);
-                //printf("[INFO] 3!\n");
-                if(/*!frame->IsEmpty() &&*/ !(frame->IsInvalid())){//} && frame->IsGrayscale()){
-                    //printf("[INFO] Frame Width: %i, Height: %i\n", frame->Width(), frame->Height());
-                    //printf("[INFO] Retrieved Frame: %i\n", frame->FrameID());
-                    //printf("[INFO] 4!\n");
+                if(!(frame->IsInvalid())){
                     int size = frame->GetGrayscaleDataSize();
 
-                    //printf("[INFO] 5!\n");
                     if(offset == 0) {
-                        //printf("Release Standin Tensor...\n");
                         stand_in_deleter.release();
-                        //printf("Standin Tensor Released!\n");
-                        //printf("[INFO] 6!\n");
-
                         height = frame->Height(); width = frame->Width();
-                        if(size > width * height){
-                            printf("[ERROR] Frame Size is greater than width * height!\n");
-                            //frame->Release();
-                            //frameGroup->Release();
-                            //return tensor;
-                            //size = width * height;
-                        }
 
-                        //printf("[INFO] 6.5!\n");
-                        //printf("[INFO] Retrieved Frame: %i, Height %i, Width: %i\n", frame->FrameID(), frame->Height(), frame->Width());
                         while(full_buffer == nullptr){
                             full_buffer = (uint8_t*) malloc(size * (count+1));
-                            //printf("[INFO] 7!\n");
                             if(full_buffer == nullptr){
-                                printf("[ERROR] Failed to allocate memory for full buffer!\n");
+                                printf("[ERROR] Failed to allocate memory for full buffer!  Trying again...\n");
                                 Sleep(2);
                             }
                         }
-                        //printf("[INFO] 8!\n");
 
                         size_t shape[3] = { count, height, width };
                         nb::capsule deleter(full_buffer, [](void *p) { delete[] (uint8_t *) p; }); /// Delete 'full_buffer' when the 'deleter' capsule expires
                         tensor = nb::tensor<nb::numpy, uint8_t>(full_buffer, 3, shape, deleter);
-                        //printf("[INFO] 9!\n");
                     }
                     if(size > width * height){
-                        printf("[WARNING] Starting MemCpy; Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", count, offset, size, width, height);
-                        
+                        printf("[WARNING] Couldn't MemCpy; Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", count, offset, size, width, height);
                         break;
                     }else{
+                        uint8_t* data = frame->GetGrayscaleData();
                         // Copy the frame from the Optitrack SDK to our contiguous Numpy-Managed Buffer
-                        memcpy(full_buffer + offset, frame->GetGrayscaleData(), size);
+                        //printf("[WARNING] Starting MemCpy at address: %zu, offset forward by %zu\n", (size_t)data, (size_t)data - last_address);
+                        //last_address = (size_t)data;
+                        memcpy(full_buffer + offset, data, size);
                         offset += size;
                     }
-                    //printf("[INFO] Ending MemCpy!\n");
                 } else {
                     printf("[WARNING] Subframe was Empty or Invalid! From camera: %i\n", frame->GetCamera()->Serial());
                 }
-                //printf("[INFO] 12!\n");
                 frame->Release();
-                //printf("[INFO] 13!\n");
             }
         }else{
             printf("[WARNING] Framegroup is a nullptr or has an invalid number of cameras!\n");
         }
-        //printf("[INFO] 14!\n");
         frameGroup->Release();
-        //printf("[INFO] 15!\n");
-        if(offset == 0) { printf("[WARNING] No full or valid frames were found in the FrameGroup!  Crashing...\n"); }
-        //printf("[INFO] 16!\n");
+        if(offset == 0) { printf("[WARNING] No full or valid frames were found in the FrameGroup!  Returning Default Tensor...\n"); }
         return tensor;
     });
 
