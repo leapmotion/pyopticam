@@ -8,7 +8,7 @@ import queue
 
 class ffmpegThread(threading.Thread):
     '''A thread for encoding images to FFMPEG'''
-    def __init__(self, out_file = 'output.mp4', width = 640, height=512*8, framerate=120, codec="libx264", crf=2, g=40, preset='fast', tune='fastdecode'):
+    def __init__(self, out_file = 'output.mp4', width = 640, height=512*8, framerate=120, codec="libx264", crf=2, g=40, preset='ultrafast', tune='fastdecode'):
         '''Initialize FFMPEG Encoding'''
         threading.Thread.__init__(self)
         self.out_file = out_file
@@ -55,23 +55,24 @@ class ffmpegThread(threading.Thread):
         self.pipe = subprocess.Popen(self.cmd_out, stdin=subprocess.PIPE)
         self.fout = self.pipe.stdin
 
-        while(self.should_run):# and time.time() - self.deadmansSwitch < 1.0): #not self.image_queue.empty() and 
-            #time_ms = (time.perf_counter()-self.t)*(10 ** 3)
-            #print("FFMPEG Interframe Time: "+ str(time_ms) + "ms", "Deadman's Switch", time.time() - self.deadmansSwitch)
-            #self.t = time.perf_counter()
+        while(self.should_run or not self.image_queue.empty()):# and time.time() - self.deadmansSwitch < 1.0): # and 
+            time_ms = (time.perf_counter()-self.t)*(10 ** 3)
+            self.t = time.perf_counter()
             #if self.pipe.stdout is not None:
             #    for line in self.pipe.stdout:
             #        print(line)
 
             if self.num_frames_input % 120 == 0:
                 sys.stdout.flush()
+                print("FFMPEG Interframe Time: "+ str(time_ms) + "ms", "Deadman's Switch", time.time() - self.deadmansSwitch)
                 print("FFMPEG: Encoding Frame", self.num_frames_input, "with", self.image_queue.qsize(), "images in queue")
 
-            image_frame = self.image_queue.get()
-            if image_frame.shape[0] != self.height or image_frame.shape[1] != self.width:
-                image_frame = cv2.resize(image_frame, (int(self.width), int(self.height)))
-            self.fout.write(image_frame.tostring())
-            self.num_frames_input += 1
+            if not self.image_queue.empty():
+                image_frame = self.image_queue.get()
+                if image_frame.shape[0] != self.height or image_frame.shape[1] != self.width:
+                    image_frame = cv2.resize(image_frame, (int(self.width), int(self.height)))
+                self.fout.write(image_frame.tostring())
+                self.num_frames_input += 1
 
             time.sleep(0.001)
 

@@ -66,8 +66,10 @@ for i in range(len(camera_array)):
      #print("Retrieved Frame!", image_frame.shape)
      #cv2.imwrite("CameraFrame"+str(i)+".png", image_frame)
 
-ffmpeg_process = mp4_thread.ffmpegThread("OptitrackOutput.mp4", width=640 / 4, height=512 * len(camera_array) / 4)
+ffmpeg_process = mp4_thread.ffmpegThread("OptitrackOutput.mp4", width=640/2, height=512 * len(camera_array) /2)
 ffmpeg_process.start()
+
+fake = np.zeros((16, 16), dtype=np.uint8)
 
 print("Starting to retrieve frame groups...")
 while(not (cv2.waitKey(4) & 0xFF == ord('q'))):
@@ -75,8 +77,9 @@ while(not (cv2.waitKey(4) & 0xFF == ord('q'))):
     image_frame = m.GetFrameGroupArray(sync)
     image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
     image_frame = cv2.resize(image_frame, (int(ffmpeg_process.width), int(ffmpeg_process.height)))
-    ffmpeg_process.add_image(np.copy(image_frame))
-    cv2.imshow("CameraFrame - " + str(i), np.copy(image_frame))
+    ffmpeg_process.add_image(image_frame)
+    cv2.imshow("CameraFrame - " + str(i), image_frame)
+    #cv2.imshow("Fake Frame", fake)
 
     #if ffmpeg_process.num_frames_input % 100 == 0:
     #    #print("Processed", ffmpeg_process.num_frames_input, "frames")
