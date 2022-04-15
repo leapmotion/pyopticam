@@ -8,7 +8,7 @@ import queue
 
 class ffmpegThread(threading.Thread):
     '''A thread for encoding images to FFMPEG'''
-    def __init__(self, out_file = 'output.mp4', width = 640, height=512*8, framerate=120, codec="libx264", crf=2, g=40, preset='ultrafast', tune='fastdecode'):
+    def __init__(self, out_file = 'output.mp4', width = 640, height=512*8, framerate=120, codec="libx264", crf=2, g=40, preset='fast', tune='fastdecode'):
         '''Initialize FFMPEG Encoding'''
         threading.Thread.__init__(self)
         self.out_file = out_file
@@ -74,7 +74,7 @@ class ffmpegThread(threading.Thread):
                 self.fout.write(image_frame.tostring())
                 self.num_frames_input += 1
 
-            time.sleep(0.001)
+            time.sleep(0.000001)
 
         print("Closing FOUT...")
         self.fout.close()

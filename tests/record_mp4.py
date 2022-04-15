@@ -50,7 +50,7 @@ for i in range(len(camera_array)):
 
      print("Setting MJPEG Mode")
      camera_array[i].SetVideoType(m.eVideoMode.MJPEGMode) # and GrayscaleMode work
-     camera_array[i].SetExposure(250)
+     camera_array[i].SetExposure(100)
      #camera_array[i].SetThreshold(150)
      #camera_array[i].SetIntensity(5)
      print("Starting Camera...")
@@ -72,7 +72,7 @@ ffmpeg_process.start()
 fake = np.zeros((16, 16), dtype=np.uint8)
 
 print("Starting to retrieve frame groups...")
-while(not (cv2.waitKey(4) & 0xFF == ord('q'))):
+while(not (cv2.waitKey(1) & 0xFF == ord('q'))):
     #print("Retrieving FrameGroup...")
     image_frame = m.GetFrameGroupArray(sync)
     image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
