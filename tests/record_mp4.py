@@ -51,6 +51,8 @@ for i in range(len(camera_array)):
      print("Setting MJPEG Mode")
      camera_array[i].SetVideoType(m.eVideoMode.MJPEGMode) # and GrayscaleMode work
      camera_array[i].SetExposure(100)
+     camera_array[i].SetShutterDelay(100 * i) # Keep the cameras from firing into eachother?
+     camera_array[i].SetStrobeOffset(100 * i) # Keep the cameras from firing into eachother?
      #camera_array[i].SetThreshold(150)
      #camera_array[i].SetIntensity(5)
      print("Starting Camera...")
