@@ -261,6 +261,7 @@ NB_MODULE(pyopticam_ext, m) {
                     }
                     if(size > width * height){
                         printf("[WARNING] Couldn't MemCpy; Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", count, offset, size, width, height);
+                        frame->Release();
                         break;
                     }else{
                         uint8_t* data = frame->GetGrayscaleData();

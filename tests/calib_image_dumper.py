@@ -2,6 +2,7 @@ import pyopticam as m
 import numpy as np
 import time
 import cv2
+import os
 
 cameraManager = m.CameraManager.X()
 print("Waiting for Cameras to Initialize...")
@@ -45,8 +46,8 @@ for i in range(len(camera_array)):
      print("Setting MJPEG Mode")
      camera_array[i].SetVideoType(m.eVideoMode.MJPEGMode) # and GrayscaleMode work
      camera_array[i].SetExposure(100)
-     camera_array[i].SetShutterDelay(100 * i) # Keep the cameras from firing into eachother?
-     camera_array[i].SetStrobeOffset(100 * i) # Keep the cameras from firing into eachother?
+     #camera_array[i].SetShutterDelay(100 * i) # Keep the cameras from firing into eachother?
+     #camera_array[i].SetStrobeOffset(100 * i) # Keep the cameras from firing into eachother?
      #camera_array[i].SetThreshold(150)
      #camera_array[i].SetIntensity(5)
      print("Starting Camera...")
@@ -59,12 +60,18 @@ keyPressed = cv2.waitKey(1)
 while(not (keyPressed & 0xFF == ord('q'))):
     image_frame = m.GetFrameGroupArray(sync)
 
-    if (keyPressed & 0xFF == ord('q')):
-
-        
+    if (keyPressed & 0xFF == ord('w')):
         for camera_index in range(image_frame.shape[0]):
+            if not os.path.isdir("./camera_" + str(camera_index)):
+                os.mkdir("./camera_" + str(camera_index))
+
             cv2.imwrite("./camera_" + str(camera_index) + "/camera_" + str(camera_index) + "_" + str(num_images) + ".jpg", image_frame[camera_index])
         num_images += 1
+        print("Dumped", num_images, "image")
+
+    image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
+    image_frame = cv2.resize(image_frame, (int(640/2), int(512 * len(camera_array) /2)))
+    cv2.imshow("CameraFrame - " + str(i), image_frame)
 
     keyPressed = cv2.waitKey(1)
 

@@ -41,6 +41,7 @@ sync = m.cModuleSync.Create()
 for i in range(len(camera_array)):
     sync.AddCamera(camera_array[i], 0)
 
+exposure = 400
 for i in range(len(camera_array)):
      #camera_array[i].SetExposure(8000)
      print("Camera", i, "Parameters: Name", camera_array[i].Name() , ", Framerate:", camera_array[i].FrameRate(), 
@@ -50,9 +51,9 @@ for i in range(len(camera_array)):
 
      print("Setting MJPEG Mode")
      camera_array[i].SetVideoType(m.eVideoMode.MJPEGMode) # and GrayscaleMode work
-     camera_array[i].SetExposure(100)
-     camera_array[i].SetShutterDelay(100 * i) # Keep the cameras from firing into eachother?
-     camera_array[i].SetStrobeOffset(100 * i) # Keep the cameras from firing into eachother?
+     camera_array[i].SetExposure(exposure)
+     camera_array[i].SetShutterDelay(int(exposure * 1.1 * i)) # Keep the cameras from firing into eachother?
+     camera_array[i].SetStrobeOffset(int(exposure * 1.1 * i)) # Keep the cameras from firing into eachother?
      #camera_array[i].SetThreshold(150)
      #camera_array[i].SetIntensity(5)
      print("Starting Camera...")
@@ -68,27 +69,35 @@ for i in range(len(camera_array)):
      #print("Retrieved Frame!", image_frame.shape)
      #cv2.imwrite("CameraFrame"+str(i)+".png", image_frame)
 
-ffmpeg_process = mp4_thread.ffmpegThread("OptitrackOutput.mp4", width=640/2, height=512 * len(camera_array) /2)
-ffmpeg_process.start()
+ffmpeg_recording = False
+
 
 fake = np.zeros((16, 16), dtype=np.uint8)
 
 print("Starting to retrieve frame groups...")
-while(not (cv2.waitKey(1) & 0xFF == ord('q'))):
+keypress = cv2.waitKey(1)
+while(not (keypress & 0xFF == ord('q'))):
     #print("Retrieving FrameGroup...")
+
+    if (keypress & 0xFF == ord('w')):
+        if not ffmpeg_recording:
+            ffmpeg_process = mp4_thread.ffmpegThread("OptitrackOutput.mp4", width=640/2, height=512 * len(camera_array) /2)
+            ffmpeg_process.start()
+            ffmpeg_recording = True
+        else: 
+            print("Killing FFMPEG process...")
+            ffmpeg_process.end_encoding()
+            ffmpeg_recording = False
+
     image_frame = m.GetFrameGroupArray(sync)
-    image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
-    image_frame = cv2.resize(image_frame, (int(ffmpeg_process.width), int(ffmpeg_process.height)))
-    ffmpeg_process.add_image(image_frame)
-    cv2.imshow("CameraFrame - " + str(i), image_frame)
-    #cv2.imshow("Fake Frame", fake)
+    if image_frame.shape[1] > 1:
+        image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
+        image_frame = cv2.resize(image_frame, (int(640/2), int(512 * len(camera_array) /2)))
+        if ffmpeg_recording:
+            ffmpeg_process.add_image(image_frame)
+        cv2.imshow("CameraFrame - " + str(i), image_frame)
 
-    #if ffmpeg_process.num_frames_input % 100 == 0:
-    #    #print("Processed", ffmpeg_process.num_frames_input, "frames")
-    #    print("Images backed up in the FMMPEG Thread: ", len(ffmpeg_process.image_queue))
-
-print("Killing FFMPEG process...")
-ffmpeg_process.end_encoding()
+    keypress = cv2.waitKey(1)
 
 sync.RemoveAllCameras()
 m.cModuleSync.Destroy(sync)
