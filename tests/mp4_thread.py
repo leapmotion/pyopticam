@@ -8,7 +8,7 @@ import queue
 
 class ffmpegThread(threading.Thread):
     '''A thread for encoding images to FFMPEG'''
-    def __init__(self, out_file = 'output.mp4', width = 640, height=512*8, framerate=120, codec="libx264", crf=2, g=40, preset='fast', tune='fastdecode'):
+    def __init__(self, out_file = 'output.mp4', width = 640, height=512*8, framerate=120, codec="h264_nvenc", crf=32, g=40, preset='llhq', tune='hq'):
         '''Initialize FFMPEG Encoding'''
         threading.Thread.__init__(self)
         self.out_file = out_file
@@ -36,12 +36,12 @@ class ffmpegThread(threading.Thread):
            '-i', '-', # The input comes from a pipe
            '-an', # Tells FFMPEG not to expect any audio
            '-vcodec', self.codec,
-           '-x264-params', 'keyint={}:scenecut=0'.format(self.g),
-           '-crf', str(self.crf),
-           '-g', str(self.g), # frames per keyframe
+           #'-x264-params', 'keyint={}:scenecut=0'.format(self.g),
+           '-cq', str(self.crf), # THIS IS THE ONLY QUALITY SETTING THAT MATTERS, (best)0-51(worst)
+           #'-g', str(self.g), # frames per keyframe
            '-pix_fmt', 'yuv420p',
            '-preset', preset,#"slow",
-           '-tune',"fastdecode",
+           #'-tune',self.tune,
            #'-vf', str(args.vf)
            self.out_file
         ]
@@ -64,8 +64,8 @@ class ffmpegThread(threading.Thread):
 
             if self.num_frames_input % 120 == 0:
                 sys.stdout.flush()
-                print("FFMPEG Interframe Time: "+ str(time_ms) + "ms", "Deadman's Switch", time.time() - self.deadmansSwitch)
-                print("FFMPEG: Encoding Frame", self.num_frames_input, "with", self.image_queue.qsize(), "images in queue")
+                #print("FFMPEG Interframe Time: "+ str(time_ms) + "ms", "Deadman's Switch", time.time() - self.deadmansSwitch)
+                print("FFMPEG: "+ str(time_ms) +"ms/Frame, Encoding Frame", self.num_frames_input, "with", self.image_queue.qsize(), "images in queue")
 
             if not self.image_queue.empty():
                 image_frame = self.image_queue.get()
@@ -74,7 +74,7 @@ class ffmpegThread(threading.Thread):
                 self.fout.write(image_frame.tostring())
                 self.num_frames_input += 1
 
-            time.sleep(0.000001)
+            time.sleep(0.00001)
 
         print("Closing FOUT...")
         self.fout.close()

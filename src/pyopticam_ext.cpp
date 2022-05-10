@@ -298,6 +298,16 @@ NB_MODULE(pyopticam_ext, m) {
         .value("UnknownMode", Core::eVideoMode::UnknownMode);
         //.export_values();
 
+    nb::enum_<CameraLibrary::eImagerGain>(m, "eImagerGain")
+        .value("Gain_Level0", CameraLibrary::eImagerGain::Gain_Level0)
+        .value("Gain_Level1", CameraLibrary::eImagerGain::Gain_Level1)
+        .value("Gain_Level2", CameraLibrary::eImagerGain::Gain_Level2)
+        .value("Gain_Level3", CameraLibrary::eImagerGain::Gain_Level3)
+        .value("Gain_Level4", CameraLibrary::eImagerGain::Gain_Level4)
+        .value("Gain_Level5", CameraLibrary::eImagerGain::Gain_Level5)
+        .value("Gain_Level6", CameraLibrary::eImagerGain::Gain_Level6)
+        .value("Gain_Level7", CameraLibrary::eImagerGain::Gain_Level7);
+
     nb::enum_<CameraLibrary::eCameraState>(m, "eCameraState")
         .value("Uninitialized"  , CameraLibrary::eCameraState::Uninitialized)
         .value("InitializingDevice", CameraLibrary::eCameraState::InitializingDevice)
