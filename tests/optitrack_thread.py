@@ -61,7 +61,7 @@ class OptitrackThread(threading.Thread):
             print("Setting MJPEG Mode")
             self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode work
             self.camera_array[i].SetExposure(self.exposure)
-            self.camera_array[i].SetIntensity(10)
+            self.camera_array[i].SetIntensity(5)
             self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
             if self.delay_strobe:
                 self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?

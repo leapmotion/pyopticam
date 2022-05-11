@@ -5,7 +5,7 @@ def smoothStep(x, edge0, edge1):
   t = np.clip((x - edge0) / (edge1 - edge0), 0.0, 1.0)
   return t * t * (3.0 - 2.0 * t)
 
-thresh1 = 30
+thresh1 = 15
 thresh2 = 40
 background_two_frames = None
 
@@ -26,7 +26,8 @@ while(cap.isOpened() and not (cv2.waitKey(1) & 0xFF == ord('q'))):
             # Suppress pixels in the image that are close to the background model
             deviation = cv2.absdiff(frame.astype(np.float), background_two_frames)
             mask = np.where(deviation < thresh1, 0, 1).astype(np.uint8)
-            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3,3),np.uint8))
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN , np.ones((3,3),np.uint8))
+            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3,3),np.uint8))
             #mask = smoothStep(deviation, thresh1, thresh2)
             frame[:,:,:] = cv2.multiply(frame[:,:,:], mask, scale=1.0, dtype=0).astype(np.uint8)
 
