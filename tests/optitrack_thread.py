@@ -6,7 +6,7 @@ import pyopticam as m
 
 class OptitrackThread(threading.Thread):
     '''A thread for receiving images from the Optitrack SDK'''
-    def __init__(self, mode=m.eVideoMode.MJPEGMode, exposure=50, delay_strobe=False):
+    def __init__(self, mode=m.eVideoMode.GrayscaleMode, exposure=50, delay_strobe=False):
         '''Initialize Optitrack Receptiom'''
         threading.Thread.__init__(self)
         self.should_run = True
@@ -30,7 +30,8 @@ class OptitrackThread(threading.Thread):
             self.camera_entries_array[i] = self.cameras.get(i)
 
         # Sort the Camera Entries by Serial Number for deterministic enumeration
-        self.camera_entries_array = sorted(self.camera_entries_array, key=lambda x: x.Serial()) 
+        self.camera_entries_array = sorted(self.camera_entries_array, key=lambda x: x.Serial())
+        self.camera_serials = []
 
         for i in range(self.cameras.Count()):
             print("CameraEntry", i, "Parameters:", #UID", camera.UID(), 
@@ -44,6 +45,7 @@ class OptitrackThread(threading.Thread):
                 time.sleep(0.1)
                 self.camera_array[i] = m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID())#BySerial(cameraEntry.Serial())
                 print("Got Camera: ", i)
+                self.camera_serials.append(self.camera_entries_array[i].Serial())
 
         self.sync = m.cModuleSync.Create()
         for i in range(len(self.camera_array)):
@@ -58,18 +60,20 @@ class OptitrackThread(threading.Thread):
                   ", Intensity:", self.camera_array[i].Intensity(),", CameraID:" , self.camera_array[i].CameraID())
             self.camera_array[i].SetStatusRingRGB(0, 255, 0)
 
-            print("Setting MJPEG Mode")
+            print("Setting "+str(self.mode)+" Mode")
             self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode work
-            self.camera_array[i].SetExposure(self.exposure)
-            self.camera_array[i].SetIntensity(5)
-            self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
-            if self.delay_strobe:
-                self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
-                self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+            #self.camera_array[i].SetExposure(self.exposure)
+            #self.camera_array[i].SetIntensity(5)
+            #self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
+            #if self.delay_strobe:
+            #    self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+            #    self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
             #camera_array[i].SetThreshold(150)
             #camera_array[i].SetIntensity(5)
             print("Starting Camera...")
             self.camera_array[i].Start()
+
+        self.camera_serials = np.array(self.camera_serials, dtype=np.int32)
 
 
     def run(self):
@@ -78,8 +82,13 @@ class OptitrackThread(threading.Thread):
         while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
             #time_ms = (time.perf_counter()-self.t)*(10 ** 3)
             #self.t = time.perf_counter()
-            self.current_frame = m.GetFrameGroupArray(self.sync)
-            time.sleep(0.001)
+            print("About to retrieve a new frame...")
+            if self.mode == m.eVideoMode.GrayscaleMode:
+                self.current_frame = m.GetSlowFrameGroupArray(self.camera_serials)
+            else:
+                self.current_frame = m.GetFrameGroupArray(self.sync)
+            print("Retrieved a new frame: ", self.current_frame.shape)
+            time.sleep(0.01)
 
         self.sync.RemoveAllCameras()
         m.cModuleSync.Destroy(self.sync)
