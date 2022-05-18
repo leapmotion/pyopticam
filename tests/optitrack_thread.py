@@ -23,7 +23,7 @@ class OptitrackThread(threading.Thread):
         print("Got CameraList; Number of Cameras:", self.cameras.Count())
 
         self.frame_array          = [None] * self.cameras.Count()
-        self.camera_array         = [None] * self.cameras.Count()
+        self.camera_array         = []#[None] * self.cameras.Count()
         self.camera_entries_array = [None] * self.cameras.Count()
 
         for i in range(self.cameras.Count()):
@@ -33,7 +33,7 @@ class OptitrackThread(threading.Thread):
         self.camera_entries_array = sorted(self.camera_entries_array, key=lambda x: x.Serial())
         self.camera_serials = []
 
-        for i in range(self.cameras.Count()):
+        for i in range(3):#self.cameras.Count()):
             print("CameraEntry", i, "Parameters:", #UID", camera.UID(), 
                 ", Serial:", self.camera_entries_array[i].Serial(), ", SerialString:", self.camera_entries_array[i].SerialString(),
                 ", Name:", self.camera_entries_array[i].Name(), ", State:", self.camera_entries_array[i].State(), 
@@ -43,25 +43,33 @@ class OptitrackThread(threading.Thread):
                 # Get the actual camera object associated with this UID
                 print("About to get Camera: ", i)
                 time.sleep(0.1)
-                self.camera_array[i] = m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID())#BySerial(cameraEntry.Serial())
+                self.camera_array.append(m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID()))#BySerial(cameraEntry.Serial())
                 print("Got Camera: ", i)
                 self.camera_serials.append(self.camera_entries_array[i].Serial())
-
-        self.sync = m.cModuleSync.Create()
-        for i in range(len(self.camera_array)):
-            self.sync.AddCamera(self.camera_array[i], 0)
 
         self.mode = mode
         self.exposure = exposure
         self.delay_strobe = delay_strobe
+
+        if self.mode != m.eVideoMode.GrayscaleMode:
+            print("Creating Sync Object...")
+            self.sync = m.cModuleSync.Create()
+            for i in range(len(self.camera_array)):
+                self.sync.AddCamera(self.camera_array[i], 0)
+        else:
+            self.sync = None
+
         for i in range(len(self.camera_array)):
             print("Camera", i, "Parameters: Name", self.camera_array[i].Name() , ", Framerate:", self.camera_array[i].FrameRate(), 
                   ", Exposure:" , self.camera_array[i].Exposure(), ", Threshold:", self.camera_array[i].Threshold(), 
                   ", Intensity:", self.camera_array[i].Intensity(),", CameraID:" , self.camera_array[i].CameraID())
-            self.camera_array[i].SetStatusRingRGB(0, 255, 0)
+            #self.camera_array[i].SetStatusRingRGB(0, 255, 0)
 
             print("Setting "+str(self.mode)+" Mode")
             self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode work
+            #self.camera_array[i].SendInvalidFrames(True)
+            #self.camera_array[i].SendEmptyFrames(True)
+            self.camera_array[i].SetFrameRate(2)
             #self.camera_array[i].SetExposure(self.exposure)
             #self.camera_array[i].SetIntensity(5)
             #self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
@@ -71,15 +79,19 @@ class OptitrackThread(threading.Thread):
             #camera_array[i].SetThreshold(150)
             #camera_array[i].SetIntensity(5)
             print("Starting Camera...")
+            #time.sleep(1)
             self.camera_array[i].Start()
+            #time.sleep(1)
 
         self.camera_serials = np.array(self.camera_serials, dtype=np.int32)
+        print("Camera Serials:", self.camera_serials)
+        time.sleep(1)
 
 
     def run(self):
         print("Beginning Optitrack Receive Thread!")
 
-        while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
+        while(self.should_run and time.time() - self.deadmansSwitch < 6.0):
             #time_ms = (time.perf_counter()-self.t)*(10 ** 3)
             #self.t = time.perf_counter()
             print("About to retrieve a new frame...")
@@ -88,10 +100,11 @@ class OptitrackThread(threading.Thread):
             else:
                 self.current_frame = m.GetFrameGroupArray(self.sync)
             print("Retrieved a new frame: ", self.current_frame.shape)
-            time.sleep(0.01)
+            time.sleep(0.1)
 
-        self.sync.RemoveAllCameras()
-        m.cModuleSync.Destroy(self.sync)
+        if self.sync:
+            self.sync.RemoveAllCameras()
+            m.cModuleSync.Destroy(self.sync)
 
         for i in range(len(self.camera_array)):
             if self.camera_array[i].State() == m.eCameraState.Initialized:

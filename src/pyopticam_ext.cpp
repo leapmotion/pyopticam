@@ -309,9 +309,16 @@ NB_MODULE(pyopticam_ext, m) {
         int height = 0, width = 0;
         unsigned int last_address = 0;
 
+        printf("[INFO] About to get Camera Manager\n");
+        CameraLibrary::CameraManager* cameraManager = &CameraManager::X();
+
         for(int i = 0; i < count; i++){
-            printf("[INFO] About to read SubFrame %i\n", i);
-            Frame* frame = CameraManager::X().GetCameraBySerial(serials(i))->GetFrame();
+            printf("[INFO] About to get Camera %i with serial %i\n", i, serials(i));
+            Camera* camera = cameraManager->GetCameraBySerial(serials(i));
+            printf("[INFO] About to read SubFrame %i with serial %i\n", i, serials(i));
+            if (!camera->IsCameraRunning()) { printf("[INFO] CAMERA IS NOT RUNNING!\n");  camera->Start(); }
+
+            Frame* frame = camera->GetFrame();
             if(!(frame->IsInvalid())){
                 printf("[INFO] Getting Subframe Size\n");
                 int size = frame->GetGrayscaleDataSize();
