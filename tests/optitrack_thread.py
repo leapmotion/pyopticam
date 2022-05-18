@@ -33,7 +33,7 @@ class OptitrackThread(threading.Thread):
         self.camera_entries_array = sorted(self.camera_entries_array, key=lambda x: x.Serial())
         self.camera_serials = []
 
-        for i in range(3):#self.cameras.Count()):
+        for i in range(4):#self.cameras.Count()):
             print("CameraEntry", i, "Parameters:", #UID", camera.UID(), 
                 ", Serial:", self.camera_entries_array[i].Serial(), ", SerialString:", self.camera_entries_array[i].SerialString(),
                 ", Name:", self.camera_entries_array[i].Name(), ", State:", self.camera_entries_array[i].State(), 
@@ -44,6 +44,8 @@ class OptitrackThread(threading.Thread):
                 print("About to get Camera: ", i)
                 time.sleep(0.1)
                 self.camera_array.append(m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID()))#BySerial(cameraEntry.Serial())
+                self.camera_array[-1].SetFrameDecimation(1)
+                self.camera_array[-1].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
                 print("Got Camera: ", i)
                 self.camera_serials.append(self.camera_entries_array[i].Serial())
 
@@ -69,7 +71,10 @@ class OptitrackThread(threading.Thread):
             self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode work
             #self.camera_array[i].SendInvalidFrames(True)
             #self.camera_array[i].SendEmptyFrames(True)
-            self.camera_array[i].SetFrameRate(2)
+            self.camera_array[i].SetFrameDecimation(1)
+            self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
+            print("Setting Framerate", self.camera_array[i].MinimumFrameRateValue(), "Current Decimation", self.camera_array[i].FrameDecimation(), "Current Grayscale Decimation", self.camera_array[i].GrayscaleDecimation())
+            #self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
             #self.camera_array[i].SetExposure(self.exposure)
             #self.camera_array[i].SetIntensity(5)
             #self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
@@ -81,6 +86,7 @@ class OptitrackThread(threading.Thread):
             print("Starting Camera...")
             #time.sleep(1)
             self.camera_array[i].Start()
+            #self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue())
             #time.sleep(1)
 
         self.camera_serials = np.array(self.camera_serials, dtype=np.int32)
@@ -94,12 +100,12 @@ class OptitrackThread(threading.Thread):
         while(self.should_run and time.time() - self.deadmansSwitch < 6.0):
             #time_ms = (time.perf_counter()-self.t)*(10 ** 3)
             #self.t = time.perf_counter()
-            print("About to retrieve a new frame...")
+            #print("About to retrieve a new frame...")
             if self.mode == m.eVideoMode.GrayscaleMode:
                 self.current_frame = m.GetSlowFrameGroupArray(self.camera_serials)
             else:
                 self.current_frame = m.GetFrameGroupArray(self.sync)
-            print("Retrieved a new frame: ", self.current_frame.shape)
+            #print("Retrieved a new frame: ", self.current_frame.shape)
             time.sleep(0.1)
 
         if self.sync:

@@ -295,7 +295,7 @@ NB_MODULE(pyopticam_ext, m) {
     m.def("GetSlowFrameGroupArray", [](nb::tensor<
                             int32_t, nb::shape<nb::any>, 
                             nb::c_contig, nb::device::cpu> serials){//nb::list<int> serials){
-        printf("[INFO] Creating Dummy Data!\n");
+        //printf("[INFO] Creating Dummy Data!\n");
         uint8_t *stand_in_data = new uint8_t[8] { 1, 2, 3, 4, 5, 6, 7, 8 };
         size_t stand_in_shape[3] = { 8, 1, 1 };
         nb::capsule stand_in_deleter(stand_in_data, [](void *p) { delete[] (uint8_t *) p; });
@@ -304,35 +304,35 @@ NB_MODULE(pyopticam_ext, m) {
         // FrameGroups are null in GrayscaleMode!, Read Frames Individually the Stupid Way!
         size_t offset = 0;
         int count = serials.shape(0);
-        printf("[INFO] Count is %i\n", count);
+        //printf("[INFO] Count is %i\n", count);
         uint8_t* full_buffer = nullptr;
         int height = 0, width = 0;
         unsigned int last_address = 0;
 
-        printf("[INFO] About to get Camera Manager\n");
+        //printf("[INFO] About to get Camera Manager\n");
         CameraLibrary::CameraManager* cameraManager = &CameraManager::X();
 
         for(int i = 0; i < count; i++){
-            printf("[INFO] About to get Camera %i with serial %i\n", i, serials(i));
+            //printf("[INFO] About to get Camera %i with serial %i\n", i, serials(i));
             Camera* camera = cameraManager->GetCameraBySerial(serials(i));
-            printf("[INFO] About to read SubFrame %i with serial %i\n", i, serials(i));
+            //printf("[INFO] About to read SubFrame %i with serial %i\n", i, serials(i));
             if (!camera->IsCameraRunning()) { printf("[INFO] CAMERA IS NOT RUNNING!\n");  camera->Start(); }
 
-            Frame* frame = camera->GetFrame();
+            Frame* frame = camera->GetLatestFrame();
             if(!(frame->IsInvalid())){
-                printf("[INFO] Getting Subframe Size\n");
+                //printf("[INFO] Getting Subframe Size\n");
                 int size = frame->GetGrayscaleDataSize();
-                printf("[INFO] SubFrame Size is: %i\n", size);
+                //printf("[INFO] SubFrame Size is: %i\n", size);
 
                 if(offset == 0) {
                     stand_in_deleter.release();
                     height = frame->Height(); width = frame->Width();
 
                     while(full_buffer == nullptr){
-                        printf("[WARNING] About to alloc full_buffer: BufferSize = %i, Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", size * (count+1), count, offset, size, width, height);
+                        //printf("[WARNING] About to alloc full_buffer: BufferSize = %i, Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", size * (count+1), count, offset, size, width, height);
                         full_buffer = (uint8_t*) malloc(size * (count+1));
                         if(full_buffer == nullptr){
-                            printf("[ERROR] Failed to allocate memory for full buffer!  Trying again...\n");
+                            //printf("[ERROR] Failed to allocate memory for full buffer!  Trying again...\n");
                             Sleep(2);
                         }
                     }
@@ -348,7 +348,7 @@ NB_MODULE(pyopticam_ext, m) {
                 }else{
                     uint8_t* data = frame->GetGrayscaleData();
                     // Copy the frame from the Optitrack SDK to our contiguous Numpy-Managed Buffer
-                    printf("[WARNING] Starting MemCpy at address: %zu, offset forward by %zu\n", (size_t)data, (size_t)data - last_address);
+                    //printf("[WARNING] Starting MemCpy at address: %zu, offset forward by %zu\n", (size_t)data, (size_t)data - last_address);
                     last_address = (size_t)data;
                     memcpy(full_buffer + offset, data, size);
                     offset += size;

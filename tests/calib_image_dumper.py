@@ -46,7 +46,7 @@ while(not (keyPressed & 0xFF == ord('q'))):
         image_frame = cv2.resize(image_frame, (int(image_frame.shape[1]/2), int(image_frame.shape[0]/2)))
         cv2.imshow("CameraFrame", image_frame)
     else:
-        print("Received fewer than 8 cameras", image_frame.shape)
+        #print("Received fewer than 8 cameras", image_frame.shape)
         image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
         image_frame = cv2.resize(image_frame, (int(image_frame.shape[1]//8), int(image_frame.shape[0]//8)))
         cv2.imshow("CameraFrame", image_frame)
