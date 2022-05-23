@@ -42,22 +42,22 @@ while(not (keyPressed & 0xFF == ord('q'))):
 
     num_cams = image_frame.shape[0]
     #image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
-    image_frame        = np.vstack((np.hstack((image_frame[0], image_frame[1], image_frame[2], image_frame[3])),
-                                    np.hstack((image_frame[4], image_frame[5], image_frame[6], image_frame[7]))))
-    image_frame = cv2.resize(image_frame, (int(image_frame.shape[1]/2), int(image_frame.shape[0]/2)))
-    cv2.imshow("CameraFrame", image_frame)
+    #image_frame        = np.vstack((np.hstack((image_frame[0], image_frame[1], image_frame[2], image_frame[3])),
+    #                                np.hstack((image_frame[4], image_frame[5], image_frame[6], image_frame[7]))))
+    #image_frame = cv2.resize(image_frame, (int(image_frame.shape[1]/2), int(image_frame.shape[0]/2)))
+    #cv2.imshow("CameraFrame", image_frame)
 
     #image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
-    #if num_cams == 8:
-    #    image_frame = np.vstack((np.hstack((image_frame[0], image_frame[1], image_frame[2], image_frame[3])),
-    #                             np.hstack((image_frame[4], image_frame[5], image_frame[6], image_frame[7]))))
-    #    image_frame = cv2.resize(image_frame, (int(image_frame.shape[1]/2), int(image_frame.shape[0]/2)))
-    #    cv2.imshow("CameraFrame", image_frame)
-    #else:
-    #    #print("Received fewer than 8 cameras", image_frame.shape)
-    #    image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
-    #    image_frame = cv2.resize(image_frame, (int(image_frame.shape[1]//8), int(image_frame.shape[0]//8)))
-    #    cv2.imshow("CameraFrame", image_frame)
+    if num_cams == 8:
+        image_frame = np.vstack((np.hstack((image_frame[0], image_frame[1], image_frame[2], image_frame[3])),
+                                 np.hstack((image_frame[4], image_frame[5], image_frame[6], image_frame[7]))))
+        image_frame = cv2.resize(image_frame, (int(image_frame.shape[1]/2), int(image_frame.shape[0]/2)))
+        cv2.imshow("CameraFrame", image_frame)
+    else:
+        #print("Received fewer than 8 cameras", image_frame.shape)
+        image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
+        image_frame = cv2.resize(image_frame, (int(image_frame.shape[1]//8), int(image_frame.shape[0]//8)))
+        cv2.imshow("CameraFrame", image_frame)
 
 
     keyPressed = cv2.waitKey(1)
