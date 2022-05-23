@@ -209,30 +209,85 @@ NB_MODULE(pyopticam_ext, m) {
         }
     });
 
+    m.def("GetFrameGroupObjectArray", [](cModuleSync* sync) {
+        //printf("[INFO] Creating Dummy Data!\n");
+        // Layout is X, Y, Radius
+        float *tracked_object_data = new float[8 * 255 * 3];// { 1, 2, 3, 4, 5, 6, 7, 8 };
+        size_t tracked_object_shape[3] = { 8, 255, 3 };
+        nb::capsule tracked_object_deleter(tracked_object_data, [](void *p) { delete[] (uint8_t *) p; });
+        nb::tensor<nb::numpy, float> tensor = nb::tensor<nb::numpy, float>(tracked_object_data, 3, tracked_object_shape, /* owner = */ tracked_object_deleter);
+
+        //printf("[INFO] About to get FrameGroup!\n");
+        FrameGroup* frameGroup = sync -> GetFrameGroup();
+        //printf("[INFO] Retrieved FrameGroup!\n");
+        bool invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
+        while(invalid_frame_group){
+            //printf("[INFO] Bad Framegroup; Sleeping...\n");
+            Sleep(1);
+            frameGroup = sync -> GetFrameGroup();
+            invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
+
+            //if(invalid_frame_group){
+            //    if(frameGroup == nullptr){
+            //        printf("[INFO] FrameGroup is Null!\n");
+            //    } else {
+            //        printf("[INFO] FrameGroup has %i frames\n", frameGroup->Count());
+            //    }
+            //}
+        }
+
+        if(frameGroup != nullptr && frameGroup->Count() > 0 ){
+            int count = frameGroup->Count();
+
+            for(int i = 0; i < count; i++){
+                //printf("[INFO] About to read SubFrame %i\n", i);
+                Frame* frame = frameGroup->GetFrame(i);
+                if(!(frame->IsInvalid())){
+                    //printf("[INFO] Getting Subframe Size\n");
+                    int objCount = frame->ObjectCount();
+                    //printf("[INFO] Num objects are: %i\n", count);
+
+                    for(int j = 0; j < count; j++){
+                        tracked_object_data[(i*255) + (j * 3) + 0] = frame->Object(j)->X();
+                        tracked_object_data[(i*255) + (j * 3) + 1] = frame->Object(j)->Y();
+                        tracked_object_data[(i*255) + (j * 3) + 2] = frame->Object(j)->Radius();
+                    }
+                } else {
+                    //printf("[WARNING] Subframe was Empty or Invalid! From camera: %i\n", frame->GetCamera()->Serial());
+                }
+                frame->Release();
+            }
+        }else{
+            printf("[WARNING] Framegroup is a nullptr or has an invalid number of cameras!\n");
+        }
+        frameGroup->Release();
+        return tensor;
+    });
+
     m.def("GetFrameGroupArray", [](cModuleSync* sync) {
-        printf("[INFO] Creating Dummy Data!\n");
+        //printf("[INFO] Creating Dummy Data!\n");
         uint8_t *stand_in_data = new uint8_t[8] { 1, 2, 3, 4, 5, 6, 7, 8 };
         size_t stand_in_shape[3] = { 8, 1, 1 };
         nb::capsule stand_in_deleter(stand_in_data, [](void *p) { delete[] (uint8_t *) p; });
         nb::tensor<nb::numpy, uint8_t> tensor = nb::tensor<nb::numpy, uint8_t>(stand_in_data, 3, stand_in_shape, /* owner = */ stand_in_deleter);
 
-        printf("[INFO] About to get FrameGroup!\n");
+        //printf("[INFO] About to get FrameGroup!\n");
         FrameGroup* frameGroup = sync -> GetFrameGroup();
-        printf("[INFO] Retrieved FrameGroup!\n");
+        //printf("[INFO] Retrieved FrameGroup!\n");
         bool invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
         while(invalid_frame_group){
             //printf("[INFO] Bad Framegroup; Sleeping...\n");
-            Sleep(1000);
+            Sleep(1);
             frameGroup = sync -> GetFrameGroup();
             invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
 
-            if(invalid_frame_group){
-                if(frameGroup == nullptr){
-                    printf("[INFO] FrameGroup is Null!\n");
-                } else {
-                    printf("[INFO] FrameGroup has %i frames\n", frameGroup->Count());
-                }
-            }
+            //if(invalid_frame_group){
+            //    if(frameGroup == nullptr){
+            //        printf("[INFO] FrameGroup is Null!\n");
+            //    } else {
+            //        printf("[INFO] FrameGroup has %i frames\n", frameGroup->Count());
+            //    }
+            //}
         }
 
         size_t offset = 0;
@@ -243,19 +298,19 @@ NB_MODULE(pyopticam_ext, m) {
             unsigned int last_address = 0;
 
             for(int i = 0; i < count; i++){
-                printf("[INFO] About to read SubFrame %i\n", i);
+                //printf("[INFO] About to read SubFrame %i\n", i);
                 Frame* frame = frameGroup->GetFrame(i);
                 if(!(frame->IsInvalid())){
-                    printf("[INFO] Getting Subframe Size\n");
+                    //printf("[INFO] Getting Subframe Size\n");
                     int size = frame->GetGrayscaleDataSize();
-                    printf("[INFO] SubFrame Size is: %i\n", size);
+                    //printf("[INFO] SubFrame Size is: %i\n", size);
 
                     if(offset == 0) {
                         stand_in_deleter.release();
                         height = frame->Height(); width = frame->Width();
 
                         while(full_buffer == nullptr){
-                            printf("[WARNING] About to alloc full_buffer: BufferSize = %i, Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", size * (count+1), count, offset, size, width, height);
+                            //printf("[WARNING] About to alloc full_buffer: BufferSize = %i, Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", size * (count+1), count, offset, size, width, height);
                             full_buffer = (uint8_t*) malloc(size * (count+1));
                             if(full_buffer == nullptr){
                                 printf("[ERROR] Failed to allocate memory for full buffer!  Trying again...\n");
@@ -274,7 +329,7 @@ NB_MODULE(pyopticam_ext, m) {
                     }else{
                         uint8_t* data = frame->GetGrayscaleData();
                         // Copy the frame from the Optitrack SDK to our contiguous Numpy-Managed Buffer
-                        printf("[WARNING] Starting MemCpy at address: %zu, offset forward by %zu\n", (size_t)data, (size_t)data - last_address);
+                        //printf("[WARNING] Starting MemCpy at address: %zu, offset forward by %zu\n", (size_t)data, (size_t)data - last_address);
                         last_address = (size_t)data;
                         memcpy(full_buffer + offset, data, size);
                         offset += size;
@@ -292,7 +347,7 @@ NB_MODULE(pyopticam_ext, m) {
         return tensor;
     });
 
-    m.def("GetSlowFrameGroupArray", [](nb::tensor<
+    m.def("GetSlowFrameArray", [](nb::tensor<
                             int32_t, nb::shape<nb::any>, 
                             nb::c_contig, nb::device::cpu> serials){//nb::list<int> serials){
         //printf("[INFO] Creating Dummy Data!\n");

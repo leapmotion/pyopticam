@@ -3,11 +3,12 @@ import numpy as np
 import time
 import cv2
 import os
+import pyopticam as m
 
 num_images = 0
 num_cams = 0
 last_time = time.time()
-optitrack = optitrack_thread.OptitrackThread()
+optitrack = optitrack_thread.OptitrackThread(mode=m.eVideoMode.MJPEGMode)
 optitrack.start()
 
 print("Starting to retrieve frame groups...")
@@ -17,7 +18,7 @@ while(not (keyPressed & 0xFF == ord('q'))):
 
     if image_frame is None:
         print("Received None Frame!")
-        time.sleep(0.1)
+        time.sleep(0.001)
         continue
 
     #if (keyPressed & 0xFF == ord('w')):

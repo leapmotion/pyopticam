@@ -6,7 +6,7 @@ import pyopticam as m
 
 class OptitrackThread(threading.Thread):
     '''A thread for receiving images from the Optitrack SDK'''
-    def __init__(self, mode=m.eVideoMode.GrayscaleMode, exposure=50, delay_strobe=False):
+    def __init__(self, mode=m.eVideoMode.ObjectMode, exposure=50, delay_strobe=False):
         '''Initialize Optitrack Receptiom'''
         threading.Thread.__init__(self)
         self.should_run = True
@@ -33,7 +33,7 @@ class OptitrackThread(threading.Thread):
         self.camera_entries_array = sorted(self.camera_entries_array, key=lambda x: x.Serial())
         self.camera_serials = []
 
-        for i in range(4):#self.cameras.Count()):
+        for i in range(self.cameras.Count()):
             print("CameraEntry", i, "Parameters:", #UID", camera.UID(), 
                 ", Serial:", self.camera_entries_array[i].Serial(), ", SerialString:", self.camera_entries_array[i].SerialString(),
                 ", Name:", self.camera_entries_array[i].Name(), ", State:", self.camera_entries_array[i].State(), 
@@ -44,8 +44,8 @@ class OptitrackThread(threading.Thread):
                 print("About to get Camera: ", i)
                 time.sleep(0.1)
                 self.camera_array.append(m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID()))#BySerial(cameraEntry.Serial())
-                self.camera_array[-1].SetFrameDecimation(1)
-                self.camera_array[-1].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
+                #self.camera_array[-1].SetFrameDecimation(1)
+                #self.camera_array[-1].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
                 print("Got Camera: ", i)
                 self.camera_serials.append(self.camera_entries_array[i].Serial())
 
@@ -68,12 +68,15 @@ class OptitrackThread(threading.Thread):
             #self.camera_array[i].SetStatusRingRGB(0, 255, 0)
 
             print("Setting "+str(self.mode)+" Mode")
-            self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode work
+            self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode and ObjectMode work
+            #self.camera_array[i].SetExposure(self.exposure)
+            #self.camera_array[i].SetIntensity(5)
+            #self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
             #self.camera_array[i].SendInvalidFrames(True)
             #self.camera_array[i].SendEmptyFrames(True)
-            self.camera_array[i].SetFrameDecimation(1)
-            self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
-            print("Setting Framerate", self.camera_array[i].MinimumFrameRateValue(), "Current Decimation", self.camera_array[i].FrameDecimation(), "Current Grayscale Decimation", self.camera_array[i].GrayscaleDecimation())
+            #self.camera_array[i].SetFrameDecimation(1)
+            #self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
+            #print("Setting Framerate", self.camera_array[i].MinimumFrameRateValue(), "Current Decimation", self.camera_array[i].FrameDecimation(), "Current Grayscale Decimation", self.camera_array[i].GrayscaleDecimation())
             #self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
             #self.camera_array[i].SetExposure(self.exposure)
             #self.camera_array[i].SetIntensity(5)
@@ -91,7 +94,7 @@ class OptitrackThread(threading.Thread):
 
         self.camera_serials = np.array(self.camera_serials, dtype=np.int32)
         print("Camera Serials:", self.camera_serials)
-        time.sleep(1)
+        #time.sleep(1)
 
 
     def run(self):
@@ -102,11 +105,17 @@ class OptitrackThread(threading.Thread):
             #self.t = time.perf_counter()
             #print("About to retrieve a new frame...")
             if self.mode == m.eVideoMode.GrayscaleMode:
-                self.current_frame = m.GetSlowFrameGroupArray(self.camera_serials)
-            else:
+                self.current_frame = m.GetSlowFrameArray(self.camera_serials)
+                time.sleep(0.1)
+            elif self.mode == m.eVideoMode.MJPEGMode:
                 self.current_frame = m.GetFrameGroupArray(self.sync)
+                time.sleep(0.001)
+            elif self.mode == m.eVideoMode.ObjectMode:
+                self.current_frame = m.GetFrameGroupObjectArray(self.sync)
+                self.current_frame = np.nan_to_num(self.current_frame, nan=0.0)
+                time.sleep(0.001)
             #print("Retrieved a new frame: ", self.current_frame.shape)
-            time.sleep(0.1)
+            
 
         if self.sync:
             self.sync.RemoveAllCameras()
