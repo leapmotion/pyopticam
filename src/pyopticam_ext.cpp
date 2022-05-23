@@ -319,6 +319,12 @@ NB_MODULE(pyopticam_ext, m) {
         .value("Disconnected", CameraLibrary::eCameraState::Disconnected)
         .value("Shutdown", CameraLibrary::eCameraState::Shutdown);
 
+    nb::enum_<CameraLibrary::cModuleSyncBase::eOptimization>(m, "eOptimization")
+        .value("ForceTimelyDelivery"  , CameraLibrary::cModuleSyncBase::eOptimization::ForceTimelyDelivery)
+        .value("FavorTimelyDelivery", CameraLibrary::cModuleSyncBase::eOptimization::FavorTimelyDelivery)
+        .value("ForceCompleteDelivery", CameraLibrary::cModuleSyncBase::eOptimization::ForceCompleteDelivery)
+        .value("eOptimizationCount", CameraLibrary::cModuleSyncBase::eOptimization::eOptimizationCount);
+
     nb::class_<sStatusLightColor>(m, "sStatusLightColor")
         .def(nb::init())
         .def_readwrite("Red", &sStatusLightColor::Red)
@@ -330,6 +336,10 @@ NB_MODULE(pyopticam_ext, m) {
         .def("CameraCount", &CameraLibrary::cModuleSyncBase::CameraCount)
         .def("GetFrameGroup", &CameraLibrary::cModuleSyncBase::GetFrameGroup)
         .def("LastFrameGroupMode", &CameraLibrary::cModuleSyncBase::LastFrameGroupMode)
+        .def("AllowIncompleteGroups", &CameraLibrary::cModuleSyncBase::AllowIncompleteGroups)
+        .def("SetAllowIncompleteGroups", &CameraLibrary::cModuleSyncBase::SetAllowIncompleteGroups)
+        .def("SetOptimization", &CameraLibrary::cModuleSyncBase::SetOptimization)
+        .def("Optimization", &CameraLibrary::cModuleSyncBase::Optimization)
         .def("RemoveAllCameras", &CameraLibrary::cModuleSyncBase::RemoveAllCameras);
 
     nb::class_<CameraLibrary::cModuleSync, CameraLibrary::cModuleSyncBase>(m, "cModuleSync")
