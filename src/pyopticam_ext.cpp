@@ -295,7 +295,7 @@ NB_MODULE(pyopticam_ext, m) {
             int count = frameGroup->Count();
             uint8_t* full_buffer = nullptr;
             int height = 0, width = 0;
-            unsigned int last_address = 0;
+            //unsigned int last_address = 0;
 
             for(int i = 0; i < count; i++){
                 //printf("[INFO] About to read SubFrame %i\n", i);
@@ -330,7 +330,7 @@ NB_MODULE(pyopticam_ext, m) {
                         uint8_t* data = frame->GetGrayscaleData();
                         // Copy the frame from the Optitrack SDK to our contiguous Numpy-Managed Buffer
                         //printf("[WARNING] Starting MemCpy at address: %zu, offset forward by %zu\n", (size_t)data, (size_t)data - last_address);
-                        last_address = (size_t)data;
+                        //last_address = (size_t)data;
                         memcpy(full_buffer + offset, data, size);
                         offset += size;
                     }

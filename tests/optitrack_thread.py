@@ -65,25 +65,16 @@ class OptitrackThread(threading.Thread):
             print("Camera", i, "Parameters: Name", self.camera_array[i].Name() , ", Framerate:", self.camera_array[i].FrameRate(), 
                   ", Exposure:" , self.camera_array[i].Exposure(), ", Threshold:", self.camera_array[i].Threshold(), 
                   ", Intensity:", self.camera_array[i].Intensity(),", CameraID:" , self.camera_array[i].CameraID())
-            #self.camera_array[i].SetStatusRingRGB(0, 255, 0)
+            self.camera_array[i].SetStatusRingRGB(0, 255, 0)
 
             print("Setting "+str(self.mode)+" Mode")
             self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode and ObjectMode work
-            #self.camera_array[i].SetExposure(self.exposure)
-            #self.camera_array[i].SetIntensity(5)
-            #self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
-            #self.camera_array[i].SendInvalidFrames(True)
-            #self.camera_array[i].SendEmptyFrames(True)
-            #self.camera_array[i].SetFrameDecimation(1)
-            #self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
-            #print("Setting Framerate", self.camera_array[i].MinimumFrameRateValue(), "Current Decimation", self.camera_array[i].FrameDecimation(), "Current Grayscale Decimation", self.camera_array[i].GrayscaleDecimation())
-            #self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
-            #self.camera_array[i].SetExposure(self.exposure)
-            #self.camera_array[i].SetIntensity(5)
-            #self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
-            #if self.delay_strobe:
-            #    self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
-            #    self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+            self.camera_array[i].SetExposure(self.exposure)
+            self.camera_array[i].SetIntensity(5)
+            self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
+            if self.delay_strobe:
+                self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+                self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
             #camera_array[i].SetThreshold(150)
             #camera_array[i].SetIntensity(5)
             print("Starting Camera...")
