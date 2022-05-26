@@ -18,7 +18,10 @@ class OptitrackThread(threading.Thread):
         print("Waiting for Cameras to Initialize...")
         m.CameraManager.X().WaitForInitialization()
 
-        print("Is CameraManager Active:", m.CameraManager.IsActive())
+        print("Are Cameras Initialized?:", m.CameraManager.X().AreCamerasInitialized())
+
+        print("Is CameraManager Active:", m.CameraManager.X().IsActive())
+        
         self.cameras = m.GetCameraList(m.CameraManager.X())
         print("Got CameraList; Number of Cameras:", self.cameras.Count())
 
