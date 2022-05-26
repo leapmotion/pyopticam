@@ -58,6 +58,9 @@ class OptitrackThread(threading.Thread):
                   ", Intensity:", self.camera_array[i].Intensity(),", CameraID:" , self.camera_array[i].CameraID())
             self.camera_array[i].SetStatusRingRGB(0, 255, 0)
 
+            print("Starting Camera...")
+            self.camera_array[i].Start()
+
             print("Setting MJPEG Mode")
             self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode work
             self.camera_array[i].SetExposure(self.exposure)
@@ -68,9 +71,12 @@ class OptitrackThread(threading.Thread):
                 self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
             #camera_array[i].SetThreshold(150)
             #camera_array[i].SetIntensity(5)
-            print("Starting Camera...")
-            self.camera_array[i].Start()
 
+        #print("OPTIMIZATION SETTING?", self.sync.Optimization())
+        #print("ALLOW INCOMPLETE GROUPS?", self.sync.AllowIncompleteGroups())
+        #print("SUPPRESS OUT OF ORDER FRAMES?", self.sync.IsSuppressOutOfOrder())
+
+        self.newFrame = False
 
     def run(self):
         print("Beginning Optitrack Receive Thread!")
@@ -80,6 +86,7 @@ class OptitrackThread(threading.Thread):
             #self.t = time.perf_counter()
             self.current_frame = m.GetFrameGroupArray(self.sync)
             time.sleep(0.001)
+            self.newFrame = True
 
         self.sync.RemoveAllCameras()
         m.cModuleSync.Destroy(self.sync)
@@ -99,6 +106,7 @@ class OptitrackThread(threading.Thread):
         '''Retrieves the most recent frame from the system'''
         #image_frame = np.reshape(image, (self.height, self.width))
         #self.image_queue.put(image)
+        self.newFrame = False
         self.deadmansSwitch = time.time()
         return self.current_frame
     def stop(self):

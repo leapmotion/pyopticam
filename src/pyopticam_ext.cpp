@@ -214,13 +214,15 @@ NB_MODULE(pyopticam_ext, m) {
         nb::capsule stand_in_deleter(stand_in_data, [](void *p) { delete[] (uint8_t *) p; });
         nb::tensor<nb::numpy, uint8_t> tensor = nb::tensor<nb::numpy, uint8_t>(stand_in_data, 3, stand_in_shape, /* owner = */ stand_in_deleter);
 
-        FrameGroup* frameGroup = sync -> GetFrameGroup();
-        bool invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
+        //FrameGroup* frameGroup = sync -> GetFrameGroup(); //GetFrameGroupSharedPointer();//
+        std::shared_ptr<FrameGroup> frameGroup = sync->GetFrameGroupSharedPtr();
+        bool invalid_frame_group = !frameGroup || frameGroup == nullptr || frameGroup->Count() == 0;
         while(invalid_frame_group){
             //printf("[INFO] Bad Framegroup; Sleeping...\n");
             Sleep(1);
-            frameGroup = sync -> GetFrameGroup();
-            invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
+            //frameGroup = sync -> GetFrameGroup();
+            frameGroup = sync->GetFrameGroupSharedPtr();
+            invalid_frame_group = !frameGroup || frameGroup == nullptr || frameGroup->Count() == 0;
 
             //if(invalid_frame_group){
             //    if(frameGroup == nullptr){
@@ -237,6 +239,7 @@ NB_MODULE(pyopticam_ext, m) {
             uint8_t* full_buffer = nullptr;
             int height = 0, width = 0;
             //unsigned int last_address = 0;
+            //printf("[WARNING] FrameGroup Count = %i\n", count);
 
             for(int i = 0; i < count; i++){
                 Frame* frame = frameGroup->GetFrame(i);
@@ -260,7 +263,7 @@ NB_MODULE(pyopticam_ext, m) {
                         tensor = nb::tensor<nb::numpy, uint8_t>(full_buffer, 3, shape, deleter);
                     }
                     if(size > width * height){
-                        printf("[WARNING] Couldn't MemCpy; Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", count, offset, size, width, height);
+                        printf("[WARNING] Couldn't MemCpy; Count = %i, Offset = %zi, Size = %i, Width = %i, Height = %i\n", count, offset, size, width, height);
                         frame->Release();
                         break;
                     }else{
@@ -279,7 +282,7 @@ NB_MODULE(pyopticam_ext, m) {
         }else{
             printf("[WARNING] Framegroup is a nullptr or has an invalid number of cameras!\n");
         }
-        frameGroup->Release();
+        //frameGroup->Release();
         if(offset == 0) { printf("[WARNING] No full or valid frames were found in the FrameGroup!  Returning Default Tensor...\n"); }
         return tensor;
     });
@@ -335,12 +338,16 @@ NB_MODULE(pyopticam_ext, m) {
         .def("AddCamera", &CameraLibrary::cModuleSyncBase::AddCamera)
         .def("CameraCount", &CameraLibrary::cModuleSyncBase::CameraCount)
         .def("GetFrameGroup", &CameraLibrary::cModuleSyncBase::GetFrameGroup)
+        .def("GetFrameGroupSharedPtr", &CameraLibrary::cModuleSync::GetFrameGroupSharedPtr)
         .def("LastFrameGroupMode", &CameraLibrary::cModuleSyncBase::LastFrameGroupMode)
         .def("AllowIncompleteGroups", &CameraLibrary::cModuleSyncBase::AllowIncompleteGroups)
         .def("SetAllowIncompleteGroups", &CameraLibrary::cModuleSyncBase::SetAllowIncompleteGroups)
         .def("SetOptimization", &CameraLibrary::cModuleSyncBase::SetOptimization)
         .def("Optimization", &CameraLibrary::cModuleSyncBase::Optimization)
-        .def("RemoveAllCameras", &CameraLibrary::cModuleSyncBase::RemoveAllCameras);
+        .def("RemoveAllCameras", &CameraLibrary::cModuleSyncBase::RemoveAllCameras)
+        .def("SetSuppressOutOfOrder", &CameraLibrary::cModuleSyncBase::SetSuppressOutOfOrder)
+        .def("IsSuppressOutOfOrder", &CameraLibrary::cModuleSyncBase::IsSuppressOutOfOrder);
+        //.def("FlushFrames", &CameraLibrary::cModuleSyncBase::FlushFrames);
 
     nb::class_<CameraLibrary::cModuleSync, CameraLibrary::cModuleSyncBase>(m, "cModuleSync")
         //.def(nb::init())
@@ -350,14 +357,13 @@ NB_MODULE(pyopticam_ext, m) {
         //.def("AddCamera", &CameraLibrary::cModuleSync::AddCamera)
         //.def("CameraCount", &CameraLibrary::cModuleSync::CameraCount)
         //.def("GetFrameGroup", &CameraLibrary::cModuleSync::GetFrameGroup)
-        //.def("GetFrameGroupSharedPtr", &CameraLibrary::cModuleSync::GetFrameGroupSharedPtr)
+        
         //.def("LastFrameGroupMode", &CameraLibrary::cModuleSync::LastFrameGroupMode)
         //.def("RemoveAllCameras", &CameraLibrary::cModuleSync::RemoveAllCameras)
         //.def("GetCamera", &cModuleSyncBase::GetCamera())
         //.def("SetOptimization", &CameraLibrary::cModuleSync::SetOptimization())
         //.def("Optimization", &CameraLibrary::cModuleSync::Optimization())
         .def("PostFrame", &CameraLibrary::cModuleSync::PostFrame)
-        //.def("FlushFrames", &cModuleSync::FlushFrames)
         .def("FrameDeliveryRate", &CameraLibrary::cModuleSync::FrameDeliveryRate) // Virtual
         ;
 
