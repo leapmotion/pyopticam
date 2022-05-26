@@ -12,7 +12,9 @@ class OptitrackThread(threading.Thread):
         self.should_run = True
         self.deadmansSwitch = time.time()
         self.t = 0
-        self.current_frame = None
+        self.current_frame = np.zeros((8, 1280,512))#None
+
+        self.cur_frame = None
         
         self.cameraManager = m.CameraManager.X()
         print("Waiting for Cameras to Initialize...")
@@ -72,24 +74,30 @@ class OptitrackThread(threading.Thread):
             if self.delay_strobe:
                 self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
                 self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
-            #camera_array[i].SetThreshold(150)
-            #camera_array[i].SetIntensity(5)
-
-        #print("OPTIMIZATION SETTING?", self.sync.Optimization())
-        #print("ALLOW INCOMPLETE GROUPS?", self.sync.AllowIncompleteGroups())
-        #print("SUPPRESS OUT OF ORDER FRAMES?", self.sync.IsSuppressOutOfOrder())
 
         self.newFrame = False
+        self.thread = None
+        self.frame_id = 0
+        #self.new_frame_id = 0
+
+    def fetch_frame(self, garb, sync):
+        #t = cv2.getTickCount()/cv2.getTickFrequency()
+        self.current_framegroup = m.GetFrameGroup(sync)
+        new_frame_id = self.current_framegroup.FrameID()
+        if new_frame_id > self.frame_id:
+            self.frame_id = new_frame_id
+            new_frame = m.GetTensorFromFrameGroup(self.current_framegroup)
+            self.current_frame = new_frame
+        #print("Read Frame costs:", ((cv2.getTickCount()/cv2.getTickFrequency()) - t)*1000, "ms")
 
     def run(self):
         print("Beginning Optitrack Receive Thread!")
 
         while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
-            #time_ms = (time.perf_counter()-self.t)*(10 ** 3)
-            #self.t = time.perf_counter()
-            self.current_frame = m.GetFrameGroupArray(self.sync)
-            time.sleep(0.001)
-            self.newFrame = True
+            # Execute the frame fetching operation in another thread??
+            if self.thread is not None:
+                self.thread.join()
+            self.thread = threading.Thread(target=self.fetch_frame, args=(0, self.sync)).start()
 
         self.sync.RemoveAllCameras()
         m.cModuleSync.Destroy(self.sync)
@@ -107,11 +115,10 @@ class OptitrackThread(threading.Thread):
         print("Exiting Optitrack Camera Thread!")
     def read(self):
         '''Retrieves the most recent frame from the system'''
-        #image_frame = np.reshape(image, (self.height, self.width))
-        #self.image_queue.put(image)
         self.newFrame = False
         self.deadmansSwitch = time.time()
         return self.current_frame
     def stop(self):
         '''Ends the video receiving thread'''
         self.should_run = False
+        self.thread.join()
