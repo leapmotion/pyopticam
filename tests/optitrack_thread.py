@@ -104,7 +104,7 @@ class OptitrackThread(threading.Thread):
             elif self.mode == m.eVideoMode.ObjectMode:
                 self.current_frame = m.GetFrameGroupObjectArray(self.sync)
                 self.current_frame = np.nan_to_num(self.current_frame, nan=0.0)
-                time.sleep(0.001)
+                #time.sleep(0.001)
             #print("Retrieved a new frame: ", self.current_frame.shape)
             
 

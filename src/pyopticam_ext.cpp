@@ -58,7 +58,7 @@ NB_MODULE(pyopticam_ext, m) {
         size_t shape[2] = { 2, 4 };
 
         /// Delete 'data' when the 'deleter' capsule expires
-        nb::capsule deleter(data, [](void *p) {
+        nb::capsule deleter(data, [](void *p) noexcept {
             delete[] (float *) p;
         });
 
@@ -91,7 +91,7 @@ NB_MODULE(pyopticam_ext, m) {
         size_t shape[2] = { frame->Height(), frame->Width() };
 
         /// Delete 'data' when the 'deleter' capsule expires
-        nb::capsule deleter(data, [](void *p) {
+        nb::capsule deleter(data, [](void *p) noexcept {
             delete[] (uint8_t *) p;
         });
 
@@ -106,7 +106,7 @@ NB_MODULE(pyopticam_ext, m) {
         size_t shape[2] = { frame->Height(), frame->Width() };
 
         /// Delete 'data' when the 'deleter' capsule expires
-        //nb::capsule deleter(data, [](void *p) {
+        //nb::capsule deleter(data, [](void *p) noexcept {
         //    delete[] (uint8_t *) p;
         //});
         //printf("[INFO] Defined Deleter");
@@ -163,7 +163,7 @@ NB_MODULE(pyopticam_ext, m) {
         //size_t shape[2] = { frame->Height(), frame->Width() };
 
         ///// Delete 'data' when the 'deleter' capsule expires
-        ////nb::capsule deleter(data, [](void *p) {
+        ////nb::capsule deleter(data, [](void *p) noexcept {
         ////    delete[] (uint8_t *) p;
         ////});
         ////printf("[INFO] Defined Deleter");
@@ -172,7 +172,7 @@ NB_MODULE(pyopticam_ext, m) {
         //return tensor;
     });
 
-    m.def("GetFrameGroupArraySingle", [](cModuleSync* sync, int inSerial) {
+    /*m.def("GetFrameGroupArraySingle", [](cModuleSync* sync, int inSerial) {
         FrameGroup* frameGroup = sync -> GetFrameGroup();
         while(frameGroup == nullptr || frameGroup->Count() != 8){
             //printf("[INFO] FrameGroup is Null!\n");
@@ -193,8 +193,8 @@ NB_MODULE(pyopticam_ext, m) {
 
                     size_t shape[2] = { frame->Height(), frame->Width() };
                     /// Delete 'buffer' when the 'deleter' capsule expires
-                    nb::capsule deleter(buffer, [](void *p) { delete[] (uint8_t *) p; });
-                    nb::tensor<nb::numpy, uint8_t> tensor = nb::tensor<nb::numpy, uint8_t>(buffer, 2, shape, /* owner = */ deleter);
+                    nb::capsule deleter(buffer, [](void *p) noexcept { delete[] (uint8_t *) p; });
+                    nb::tensor<nb::numpy, uint8_t> tensor = nb::tensor<nb::numpy, uint8_t>(buffer, 2, shape, owner = deleter);
                     frame->Release();
 
                     frameGroup->Release();
@@ -207,14 +207,14 @@ NB_MODULE(pyopticam_ext, m) {
             printf("[ERROR] FRAME GROUP DID NOT HAVE SPECIFIED SERIAL IN IT");
             frameGroup->Release();
         }
-    });
+    });*/
 
     m.def("GetFrameGroupObjectArray", [](cModuleSync* sync) {
         //printf("[INFO] Creating Dummy Data!\n");
         // Layout is X, Y, Radius
         float *tracked_object_data = new float[8 * 255 * 3];// { 1, 2, 3, 4, 5, 6, 7, 8 };
         size_t tracked_object_shape[3] = { 8, 255, 3 };
-        nb::capsule tracked_object_deleter(tracked_object_data, [](void *p) { delete[] (uint8_t *) p; });
+        nb::capsule tracked_object_deleter(tracked_object_data, [](void *p) noexcept { delete[] (uint8_t *) p; });
         nb::tensor<nb::numpy, float> tensor = nb::tensor<nb::numpy, float>(tracked_object_data, 3, tracked_object_shape, /* owner = */ tracked_object_deleter);
 
         //printf("[INFO] About to get FrameGroup!\n");
@@ -268,7 +268,7 @@ NB_MODULE(pyopticam_ext, m) {
         //printf("[INFO] Creating Dummy Data!\n");
         uint8_t *stand_in_data = new uint8_t[8] { 1, 2, 3, 4, 5, 6, 7, 8 };
         size_t stand_in_shape[3] = { 8, 1, 1 };
-        nb::capsule stand_in_deleter(stand_in_data, [](void *p) { delete[] (uint8_t *) p; });
+        nb::capsule stand_in_deleter(stand_in_data, [](void *p) noexcept { delete[] (uint8_t *) p; });
         nb::tensor<nb::numpy, uint8_t> tensor = nb::tensor<nb::numpy, uint8_t>(stand_in_data, 3, stand_in_shape, /* owner = */ stand_in_deleter);
 
         //printf("[INFO] About to get FrameGroup!\n");
@@ -319,7 +319,7 @@ NB_MODULE(pyopticam_ext, m) {
                         }
 
                         size_t shape[3] = { count, height, width };
-                        nb::capsule deleter(full_buffer, [](void *p) { delete[] (uint8_t *) p; }); /// Delete 'full_buffer' when the 'deleter' capsule expires
+                        nb::capsule deleter(full_buffer, [](void *p) noexcept { delete[] (uint8_t *) p; }); /// Delete 'full_buffer' when the 'deleter' capsule expires
                         tensor = nb::tensor<nb::numpy, uint8_t>(full_buffer, 3, shape, deleter);
                     }
                     if(size > width * height){
@@ -353,7 +353,7 @@ NB_MODULE(pyopticam_ext, m) {
         //printf("[INFO] Creating Dummy Data!\n");
         uint8_t *stand_in_data = new uint8_t[8] { 1, 2, 3, 4, 5, 6, 7, 8 };
         size_t stand_in_shape[3] = { 8, 1, 1 };
-        nb::capsule stand_in_deleter(stand_in_data, [](void *p) { delete[] (uint8_t *) p; });
+        nb::capsule stand_in_deleter(stand_in_data, [](void *p) noexcept { delete[] (uint8_t *) p; });
         nb::tensor<nb::numpy, uint8_t> tensor = nb::tensor<nb::numpy, uint8_t>(stand_in_data, 3, stand_in_shape, /* owner = */ stand_in_deleter);
 
         // FrameGroups are null in GrayscaleMode!, Read Frames Individually the Stupid Way!
@@ -393,7 +393,7 @@ NB_MODULE(pyopticam_ext, m) {
                     }
 
                     size_t shape[3] = { count, height, width };
-                    nb::capsule deleter(full_buffer, [](void *p) { delete[] (uint8_t *) p; }); /// Delete 'full_buffer' when the 'deleter' capsule expires
+                    nb::capsule deleter(full_buffer, [](void *p) noexcept { delete[] (uint8_t *) p; }); /// Delete 'full_buffer' when the 'deleter' capsule expires
                     tensor = nb::tensor<nb::numpy, uint8_t>(full_buffer, 3, shape, deleter);
                 }
                 if(size > width * height){
