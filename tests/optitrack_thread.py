@@ -90,7 +90,7 @@ class OptitrackThread(threading.Thread):
 
     def run(self):
         print("Beginning Optitrack Receive Thread!")
-
+#
         while(self.should_run and time.time() - self.deadmansSwitch < 6.0):
             #time_ms = (time.perf_counter()-self.t)*(10 ** 3)
             #self.t = time.perf_counter()
@@ -107,6 +107,29 @@ class OptitrackThread(threading.Thread):
                 #time.sleep(0.001)
             #print("Retrieved a new frame: ", self.current_frame.shape)
             
+    #def fetch_frame(self, garb, sync):
+    #    #t = cv2.getTickCount()/cv2.getTickFrequency()
+
+    #    if self.mode == m.eVideoMode.ObjectMode:
+    #        new_frame = m.GetFrameGroupObjectArray(sync)
+    #        new_frame = np.nan_to_num(new_frame, nan=0.0)
+    #    else:
+    #        current_framegroup = m.GetFrameGroup(sync)
+    #        new_frame_id = current_framegroup.FrameID()
+    #        if new_frame_id > self.frame_id:
+    #            self.frame_id = new_frame_id
+    #            new_frame = m.GetTensorFromFrameGroup(current_framegroup)
+    #    self.current_frame = new_frame
+    #    #print("Read Frame costs:", ((cv2.getTickCount()/cv2.getTickFrequency()) - t)*1000, "ms")
+
+    #def run(self):
+    #    print("Beginning Optitrack Receive Thread!")
+
+    #    while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
+    #        # Execute the frame fetching operation in another thread??
+    #        if self.thread is not None:
+    #            self.thread.join()
+    #        self.thread = threading.Thread(target=self.fetch_frame, args=(0, self.sync)).start()
 
         if self.sync:
             self.sync.RemoveAllCameras()

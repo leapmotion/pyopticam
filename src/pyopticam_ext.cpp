@@ -239,6 +239,9 @@ NB_MODULE(pyopticam_ext, m) {
         if(frameGroup != nullptr && frameGroup->Count() > 0 ){
             int count = frameGroup->Count();
 
+            // Clear the Object Array to Zeros
+            for(int i = 0; i < 8 * 255 * 3; i++){ tracked_object_data[i] = 0.f; }
+
             for(int i = 0; i < count; i++){
                 //printf("[INFO] About to read SubFrame %i\n", i);
                 Frame* frame = frameGroup->GetFrame(i);
@@ -248,9 +251,9 @@ NB_MODULE(pyopticam_ext, m) {
                     //printf("[INFO] Num objects are: %i\n", count);
 
                     for(int j = 0; j < count; j++){
-                        tracked_object_data[(i*255) + (j * 3) + 0] = frame->Object(j)->X();
-                        tracked_object_data[(i*255) + (j * 3) + 1] = frame->Object(j)->Y();
-                        tracked_object_data[(i*255) + (j * 3) + 2] = frame->Object(j)->Radius();
+                        tracked_object_data[(i * 255 * 3) + (j * 3) + 0] = frame->Object(j)->X();
+                        tracked_object_data[(i * 255 * 3) + (j * 3) + 1] = frame->Object(j)->Y();
+                        tracked_object_data[(i * 255 * 3) + (j * 3) + 2] = frame->Object(j)->Radius();
                     }
                 } else {
                     //printf("[WARNING] Subframe was Empty or Invalid! From camera: %i\n", frame->GetCamera()->Serial());

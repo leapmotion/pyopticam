@@ -27,13 +27,13 @@ while(not (keyPressed & 0xFF == ord('q'))):
     print("Time: %.2fms" % time_ms)
 
     #print("Image Shape: ", image_frame.shape, image_frame)
-    full_image = np.zeros((1024, 1280, 3), dtype=np.uint8)
+    full_image = np.zeros((102, 128, 3), dtype=np.uint8)
     for camera_index in range(image_frame.shape[0]):
         for marker_index in range(image_frame.shape[1]):
             if np.min(image_frame[camera_index,marker_index]) > 5 and np.max(image_frame[camera_index,marker_index]) < 1280:
-                center = (int(image_frame[camera_index,marker_index,0]),
-                          int(image_frame[camera_index,marker_index,1]))
-                radius =  int(image_frame[camera_index,marker_index,2])
+                center = (int(image_frame[camera_index,marker_index,0]*0.1),
+                          int(image_frame[camera_index,marker_index,1]*0.1))
+                radius =  int(image_frame[camera_index,marker_index,2]*0.1)
                 #print("Drawing Marker", center, radius)
                 cv2.circle(full_image, center, radius, colors[camera_index], -1)
     cv2.imshow("Combined Camera Frames", full_image)
