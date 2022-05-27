@@ -12,9 +12,7 @@ class OptitrackThread(threading.Thread):
         self.should_run = True
         self.deadmansSwitch = time.time()
         self.t = 0
-        self.current_frame = np.zeros((8, 1280,512))#None
-
-        self.cur_frame = None
+        self.current_frame = None#np.zeros((8, 1280,512))
         
         self.cameraManager = m.CameraManager.X()
         print("Waiting for Cameras to Initialize...")
@@ -46,34 +44,34 @@ class OptitrackThread(threading.Thread):
             if self.camera_entries_array[i].State() == m.eCameraState.Initialized:
                 # Get the actual camera object associated with this UID
                 print("About to get Camera: ", i)
-                time.sleep(0.1)
+                #time.sleep(0.1)
                 self.camera_array[i] = m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID())#BySerial(cameraEntry.Serial())
                 print("Got Camera: ", i)
-
-        self.sync = m.cModuleSync.Create()
-        for i in range(len(self.camera_array)):
-            self.sync.AddCamera(self.camera_array[i], 0)
 
         self.mode = mode
         self.exposure = exposure
         self.delay_strobe = delay_strobe
         for i in range(len(self.camera_array)):
-            print("Camera", i, "Parameters: Name", self.camera_array[i].Name() , ", Framerate:", self.camera_array[i].FrameRate(), 
-                  ", Exposure:" , self.camera_array[i].Exposure(), ", Threshold:", self.camera_array[i].Threshold(), 
-                  ", Intensity:", self.camera_array[i].Intensity(),", CameraID:" , self.camera_array[i].CameraID())
-            self.camera_array[i].SetStatusRingRGB(0, 255, 0)
+            #print("Camera", i, "Parameters: Name", self.camera_array[i].Name() , ", Framerate:", self.camera_array[i].FrameRate(), 
+            #      ", Exposure:" , self.camera_array[i].Exposure(), ", Threshold:", self.camera_array[i].Threshold(), 
+            #      ", Intensity:", self.camera_array[i].Intensity(),", CameraID:" , self.camera_array[i].CameraID())
+            #self.camera_array[i].SetStatusRingRGB(0, 255, 0)
+
+            print("Setting", self.mode)
+            self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode work
 
             print("Starting Camera...")
             self.camera_array[i].Start()
+            #self.camera_array[i].SetExposure(self.exposure)
+            #self.camera_array[i].SetIntensity(5)
+            #self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
+            #if self.delay_strobe:
+            #    self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+            #    self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
 
-            print("Setting MJPEG Mode")
-            self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode work
-            self.camera_array[i].SetExposure(self.exposure)
-            self.camera_array[i].SetIntensity(5)
-            self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
-            if self.delay_strobe:
-                self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
-                self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+        self.sync = m.cModuleSync.Create()
+        for i in range(len(self.camera_array)):
+            self.sync.AddCamera(self.camera_array[i], 0)
 
         self.newFrame = False
         self.thread = None
@@ -82,11 +80,15 @@ class OptitrackThread(threading.Thread):
 
     def fetch_frame(self, garb, sync):
         #t = cv2.getTickCount()/cv2.getTickFrequency()
-        self.current_framegroup = m.GetFrameGroup(sync)
-        new_frame_id = self.current_framegroup.FrameID()
+        current_framegroup = m.GetFrameGroup(sync)
+        new_frame_id = current_framegroup.FrameID()
         if new_frame_id > self.frame_id:
             self.frame_id = new_frame_id
-            new_frame = m.GetTensorFromFrameGroup(self.current_framegroup)
+            if self.mode == m.eVideoMode.ObjectMode:
+                new_frame = m.GetObjectArrayFromFrameGroup(current_framegroup)
+                new_frame = np.nan_to_num(new_frame, nan=0.0)
+            else:
+                new_frame = m.GetTensorFromFrameGroup(current_framegroup)
             self.current_frame = new_frame
         #print("Read Frame costs:", ((cv2.getTickCount()/cv2.getTickFrequency()) - t)*1000, "ms")
 
