@@ -12,7 +12,7 @@ class OptitrackThread(threading.Thread):
         self.should_run = True
         self.deadmansSwitch = time.time()
         self.t = 0
-        self.current_frame = None#np.zeros((8, 1280,512))
+        self.current_frame = np.zeros((1, 1, 1))
         
         self.cameraManager = m.CameraManager.X()
         print("Waiting for Cameras to Initialize...")
@@ -44,7 +44,6 @@ class OptitrackThread(threading.Thread):
             if self.camera_entries_array[i].State() == m.eCameraState.Initialized:
                 # Get the actual camera object associated with this UID
                 print("About to get Camera: ", i)
-                #time.sleep(0.1)
                 self.camera_array[i] = m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID())#BySerial(cameraEntry.Serial())
                 print("Got Camera: ", i)
 
@@ -96,10 +95,11 @@ class OptitrackThread(threading.Thread):
         print("Beginning Optitrack Receive Thread!")
 
         while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
-            # Execute the frame fetching operation in another thread??
-            if self.thread is not None:
-                self.thread.join()
-            self.thread = threading.Thread(target=self.fetch_frame, args=(0, self.sync)).start()
+            # Have Numpy handle Allocating the array
+            frame_group = m.GetFrameGroup(self.sync)
+            self.current_frame = np.zeros((frame_group.Count(), 512, 640), dtype=np.uint8)
+            m.FillTensorFromFrameGroup(frame_group, self.current_frame)
+            self.newFrame = True
 
         self.sync.RemoveAllCameras()
         m.cModuleSync.Destroy(self.sync)
