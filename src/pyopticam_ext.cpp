@@ -209,6 +209,8 @@ NB_MODULE(pyopticam_ext, m) {
     });*/
 
     m.def("GetFrameGroupArray", [](cModuleSync* sync) {
+        nanobind::gil_scoped_release release;
+
         uint8_t *stand_in_data = new uint8_t[8] { 1, 2, 3, 4, 5, 6, 7, 8 };
         size_t stand_in_shape[3] = { 8, 1, 1 };
         nb::capsule stand_in_deleter(stand_in_data, [](void *p) noexcept { delete[] (uint8_t *) p; });
@@ -284,10 +286,14 @@ NB_MODULE(pyopticam_ext, m) {
         }
         //frameGroup->Release();
         if(offset == 0) { printf("[WARNING] No full or valid frames were found in the FrameGroup!  Returning Default Tensor...\n"); }
+
+        nanobind::gil_scoped_acquire acquire;
+
         return tensor;
     });
 
     m.def("GetFrameGroup", [](cModuleSync* sync) {
+        nanobind::gil_scoped_release release;
         //FrameGroup* frameGroup = sync -> GetFrameGroup(); //GetFrameGroupSharedPointer();//
         std::shared_ptr<FrameGroup> frameGroup = sync->GetFrameGroupSharedPtr();
         bool invalid_frame_group = !frameGroup || frameGroup == nullptr || frameGroup->Count() == 0;
@@ -306,10 +312,13 @@ NB_MODULE(pyopticam_ext, m) {
             //    }
             //}
         }
+        nanobind::gil_scoped_acquire acquire;
         return frameGroup;
     });
 
     m.def("GetTensorFromFrameGroup", [](std::shared_ptr<FrameGroup> frameGroup) {
+        nanobind::gil_scoped_release release;
+
         uint8_t *stand_in_data = new uint8_t[8] { 1, 2, 3, 4, 5, 6, 7, 8 };
         size_t stand_in_shape[3] = { 8, 1, 1 };
         nb::capsule stand_in_deleter(stand_in_data, [](void *p) noexcept { delete[] (uint8_t *) p; });
@@ -366,10 +375,14 @@ NB_MODULE(pyopticam_ext, m) {
         }
         //frameGroup->Release();
         if(offset == 0) { printf("[WARNING] No full or valid frames were found in the FrameGroup!  Returning Default Tensor...\n"); }
+
+        nanobind::gil_scoped_acquire acquire;
+
         return tensor;
     });
 
     m.def("FillTensorFromFrameGroup", [](std::shared_ptr<FrameGroup> frameGroup, nb::tensor<nb::numpy> tensor) { //,uint8_t, nb::shape<8, 1024, 1280>, nb::c_contig, nb::device::cpu
+        nanobind::gil_scoped_release release;
         //uint8_t *stand_in_data = new uint8_t[8] { 1, 2, 3, 4, 5, 6, 7, 8 };
         //size_t stand_in_shape[3] = { 8, 1, 1 };
         //nb::capsule stand_in_deleter(stand_in_data, [](void *p) noexcept { delete[] (uint8_t *) p; });
@@ -400,7 +413,7 @@ NB_MODULE(pyopticam_ext, m) {
                             }
                         }
                     }
-                    if(size > width * height || tensor.shape(1) != height || tensor.shape(2) != width){
+                    if(size > width * height || tensor.shape(1) < height || tensor.shape(2) < width){
                         printf("[WARNING] Couldn't MemCpy, wrong shape; Count = %i, Offset = %zi, Size = %i, Width = %i, Height = %i\n", count, offset, size, width, height);
                         frame->Release();
                         break;
@@ -423,6 +436,7 @@ NB_MODULE(pyopticam_ext, m) {
         //frameGroup->Release();
         if(offset == 0) { printf("[WARNING] No full or valid frames were found in the FrameGroup!  Returning Default Tensor...\n"); }
         //return tensor;
+        nanobind::gil_scoped_acquire acquire;
     });
 
     nb::enum_<Core::eVideoMode>(m, "eVideoMode")

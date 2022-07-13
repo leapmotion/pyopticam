@@ -12,7 +12,7 @@ class OptitrackThread(threading.Thread):
         self.should_run = True
         self.deadmansSwitch = time.time()
         self.t = 0
-        self.current_frame = None
+        self.current_frame = np.zeros((1, 1, 1))
         
         self.cameraManager = m.CameraManager.X()
         print("Waiting for Cameras to Initialize...")
@@ -44,7 +44,7 @@ class OptitrackThread(threading.Thread):
             if self.camera_entries_array[i].State() == m.eCameraState.Initialized:
                 # Get the actual camera object associated with this UID
                 print("About to get Camera: ", i)
-                time.sleep(0.1)
+                time.sleep(0.01)
                 self.camera_array[i] = m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID())#BySerial(cameraEntry.Serial())
                 print("Got Camera: ", i)
 
@@ -85,10 +85,16 @@ class OptitrackThread(threading.Thread):
         print("Beginning Optitrack Receive Thread!")
 
         while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
+            # Have Numpy handle Allocating the array
+            frame_group = m.GetFrameGroup(self.sync)
+            self.current_frame = np.zeros((frame_group.Count(), 512, 640), dtype=np.uint8)
+            m.FillTensorFromFrameGroup(frame_group, self.current_frame)
+            # Retrieve the full frame from the SDK
             #time_ms = (time.perf_counter()-self.t)*(10 ** 3)
             #self.t = time.perf_counter()
-            self.current_frame = m.GetFrameGroupArray(self.sync)
-            time.sleep(0.001)
+            #self.current_frame = m.GetFrameGroupArray(self.sync)
+            #time.sleep(0.001) # This was killing it, but also necessary to release GIL before I learned how to do it in nanobind
+
             self.newFrame = True
 
         self.sync.RemoveAllCameras()
