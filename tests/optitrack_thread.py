@@ -6,7 +6,7 @@ import pyopticam as m
 
 class OptitrackThread(threading.Thread):
     '''A thread for receiving images from the Optitrack SDK'''
-    def __init__(self, mode=m.eVideoMode.ObjectMode, exposure=50, delay_strobe=False):
+    def __init__(self, mode=m.eVideoMode.MJPEGMode, exposure=50, delay_strobe=False):
         '''Initialize Optitrack Receptiom'''
         threading.Thread.__init__(self)
         self.should_run = True
