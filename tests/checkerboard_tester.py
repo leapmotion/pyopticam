@@ -48,37 +48,38 @@ cam1_trans = np.array([[cam1_trans['x'], cam1_trans['y'], cam1_trans['z']]], dty
 print("Starting to retrieve frame groups...")
 keyPressed = cv2.waitKey(1)
 while(not (keyPressed & 0xFF == ord('q'))):
-    image_frame = optitrack.read()
+    if optitrack.newFrame:
+        image_frame = optitrack.read()
 
-    ret, corners = cv2.findChessboardCorners(
-                    image_frame[0], CHECKERBOARD,
-                    cv2.CALIB_CB_ADAPTIVE_THRESH
-                    + cv2.CALIB_CB_FAST_CHECK +
-                    cv2.CALIB_CB_NORMALIZE_IMAGE)
- 
-    if ret == True:
-        cv2.drawChessboardCorners(image_frame[0], CHECKERBOARD, corners, ret)
-        print("Corners", corners, corners.shape, corners.dtype)
+        ret, corners = cv2.findChessboardCorners(
+                        image_frame[0], CHECKERBOARD,
+                        cv2.CALIB_CB_ADAPTIVE_THRESH
+                        + cv2.CALIB_CB_FAST_CHECK +
+                        cv2.CALIB_CB_NORMALIZE_IMAGE)
+    
+        if ret == True:
+            cv2.drawChessboardCorners(image_frame[0], CHECKERBOARD, corners, ret)
+            print("Corners", corners, corners.shape, corners.dtype)
 
-        # Find the rotation and translation vectors.
-        ret, rvecs, tvecs = cv2.solvePnP(objectp3d, corners, cam0_mat, cam0_dist)
+            # Find the rotation and translation vectors.
+            ret, rvecs, tvecs = cv2.solvePnP(objectp3d, corners, cam0_mat, cam0_dist)
 
-        print("3D Points Shape:", objectp3d.shape)
+            print("3D Points Shape:", objectp3d.shape)
 
-        # Transform the 3D points by their solved translation and rotation
-        objectp3d_rotated = cv2.Rodrigues(rvecs)[0].dot(objectp3d[0].T).T
-        objectp3d_rotated_translated = (objectp3d_rotated + tvecs[0])[None, :, :]
+            # Transform the 3D points by their solved translation and rotation
+            objectp3d_rotated = cv2.Rodrigues(rvecs)[0].dot(objectp3d[0].T).T
+            objectp3d_rotated_translated = (objectp3d_rotated + tvecs[0])[None, :, :]
 
-        print("3D Points Shape After:", objectp3d_rotated_translated.shape)
+            print("3D Points Shape After:", objectp3d_rotated_translated.shape)
 
-        # Project to the next camera and draw
-        print("Moved Points:", objectp3d_rotated_translated, objectp3d_rotated_translated.shape)
-        imgpts, jac = cv2.projectPoints(objectp3d_rotated_translated, cam1_rot, cam1_trans, cam1_mat, cam1_dist)
-        imgpts = imgpts.astype(np.float32)
-        print("Imgpts", imgpts, imgpts.shape, imgpts.dtype)
-        cv2.drawChessboardCorners(image_frame[1], CHECKERBOARD, imgpts, True)
+            # Project to the next camera and draw
+            print("Moved Points:", objectp3d_rotated_translated, objectp3d_rotated_translated.shape)
+            imgpts, jac = cv2.projectPoints(objectp3d_rotated_translated, cam1_rot, cam1_trans, cam1_mat, cam1_dist)
+            imgpts = imgpts.astype(np.float32)
+            print("Imgpts", imgpts, imgpts.shape, imgpts.dtype)
+            cv2.drawChessboardCorners(image_frame[1], CHECKERBOARD, imgpts, True)
 
-    cv2.imshow("Camera Frames", np.hstack((image_frame[0], image_frame[1])))
+        cv2.imshow("Camera Frames", np.hstack((image_frame[0], image_frame[1])))
 
     keyPressed = cv2.waitKey(1)
 

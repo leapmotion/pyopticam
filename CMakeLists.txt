@@ -6,6 +6,7 @@ if (NOT SKBUILD)
                       "Please run\n$ pip install .")
 endif()
 
+add_compile_definitions(_NATURAL_POINT_CPP11_)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules")
 message(STATUS "Module Path ${CMAKE_MODULE_PATH}")
 find_package(OTCSDK)
