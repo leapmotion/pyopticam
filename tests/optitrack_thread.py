@@ -45,8 +45,10 @@ class OptitrackThread(threading.Thread):
             if self.camera_entries_array[i].State() == m.eCameraState.Initialized:
                 # Get the actual camera object associated with this UID
                 print("About to get Camera: ", i)
-                self.camera_array[i] = m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID())#BySerial(cameraEntry.Serial())
+                self.camera_array.append(m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID()))#BySerial(cameraEntry.Serial())
+                self.camera_serials.append(self.camera_entries_array[i].Serial())
                 print("Got Camera: ", i)
+                time.sleep(0.1)
 
         self.mode = mode
         self.exposure = exposure
@@ -78,6 +80,9 @@ class OptitrackThread(threading.Thread):
                 self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
                 self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
 
+        self.camera_serials = np.array(self.camera_serials, dtype=np.int32)
+        print("Camera Serials:", self.camera_serials)
+
         self.sync = m.cModuleSync.Create()
         for i in range(len(self.camera_array)):
             self.sync.AddCamera(self.camera_array[i], 0)
@@ -85,7 +90,9 @@ class OptitrackThread(threading.Thread):
         self.newFrame = False
 
     def fetch_frame(self):
-        if self.mode == m.eVideoMode.ObjectMode:
+        if self.mode == m.eVideoMode.GrayscaleMode:
+            new_frame = m.GetSlowFrameArray(self.camera_serials)
+        elif self.mode == m.eVideoMode.ObjectMode:
             new_frame = m.GetFrameGroupObjectArray(self.sync)
             new_frame = np.nan_to_num(new_frame, nan=0.0)
         else:

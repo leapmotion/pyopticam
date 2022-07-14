@@ -8,7 +8,7 @@ import pyopticam as m
 num_images = 0
 num_cams = 0
 last_time = time.time()
-optitrack = optitrack_thread.OptitrackThread(mode=m.eVideoMode.MJPEGMode)
+optitrack = optitrack_thread.OptitrackThread(mode=m.eVideoMode.GrayscaleMode)
 optitrack.start()
 
 print("Starting to retrieve frame groups...")

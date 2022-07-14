@@ -400,6 +400,80 @@ NB_MODULE(pyopticam_ext, m) {
         return tensor;
     });
 
+    m.def("GetSlowFrameArray", [](nb::tensor<
+                            int32_t, nb::shape<nb::any>, 
+                            nb::c_contig, nb::device::cpu> serials){//nb::list<int> serials){
+        nanobind::gil_scoped_release release;
+        //printf("[INFO] Creating Dummy Data!\n");
+        uint8_t *stand_in_data = new uint8_t[8] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        size_t stand_in_shape[3] = { 8, 1, 1 };
+        nb::capsule stand_in_deleter(stand_in_data, [](void *p) noexcept { delete[] (uint8_t *) p; });
+        nb::tensor<nb::numpy, uint8_t> tensor = nb::tensor<nb::numpy, uint8_t>(stand_in_data, 3, stand_in_shape, /* owner = */ stand_in_deleter);
+
+        // FrameGroups are null in GrayscaleMode!, Read Frames Individually the Stupid Way!
+        size_t offset = 0;
+        int count = serials.shape(0);
+        printf("[INFO] Count is %i\n", count);
+        uint8_t* full_buffer = nullptr;
+        int height = 0, width = 0;
+        unsigned int last_address = 0;
+
+        printf("[INFO] About to get Camera Manager\n");
+        CameraLibrary::CameraManager* cameraManager = &CameraManager::X();
+
+        for(int i = 0; i < count; i++){
+            printf("[INFO] About to get Camera %i with serial %i\n", i, serials(i));
+            Camera* camera = cameraManager->GetCameraBySerial(serials(i));
+            printf("[INFO] About to read SubFrame %i with serial %i\n", i, serials(i));
+            if (!camera->IsCameraRunning()) { printf("[INFO] CAMERA IS NOT RUNNING!\n");  camera->Start(); }
+
+            Frame* frame = camera->GetLatestFrame();
+            if(!(frame->IsInvalid())){
+                printf("[INFO] Getting Subframe Size\n");
+                int size = frame->GetGrayscaleDataSize();
+                printf("[INFO] SubFrame Size is: %i\n", size);
+
+                if(offset == 0) {
+                    stand_in_deleter.release();
+                    height = frame->Height(); width = frame->Width();
+
+                    while(full_buffer == nullptr){
+                        printf("[INFO] About to alloc full_buffer: BufferSize = %i, Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", size * (count+1), count, offset, size, width, height);
+                        full_buffer = (uint8_t*) malloc(size * (count+1));
+                        if(full_buffer == nullptr){
+                            printf("[ERROR] Failed to allocate memory for full buffer!  Trying again...\n");
+                            Sleep(2);
+                        }
+                    }
+                    size_t shape[3] = { count, height, width };
+                    nb::capsule deleter(full_buffer, [](void *p) noexcept { delete[] (uint8_t *) p; }); /// Delete 'full_buffer' when the 'deleter' capsule expires
+                    tensor = nb::tensor<nb::numpy, uint8_t>(full_buffer, 3, shape, deleter);
+                }
+                if(size > width * height){
+                    printf("[WARNING] Couldn't MemCpy; Count = %i, Offset = %i, Size = %i, Width = %i, Height = %i\n", count, offset, size, width, height);
+                    frame->Release();
+                    break;
+                }else{
+                    uint8_t* data = frame->GetGrayscaleData();
+                    // Copy the frame from the Optitrack SDK to our contiguous Numpy-Managed Buffer
+                    printf("[INFO] Starting MemCpy at address: %zu, offset forward by %zu\n", (size_t)data, (size_t)data - last_address);
+                    last_address = (size_t)data;
+                    memcpy(full_buffer + offset, data, size);
+                    offset += size;
+                }
+            } else {
+                printf("[WARNING] Subframe was Empty or Invalid! From camera: %i\n", frame->GetCamera()->Serial());
+            }
+            frame->Release();
+        }
+        //frameGroup->Release();
+        if(offset == 0) { printf("[WARNING] No full or valid frames were found in the FrameGroup!  Returning Default Tensor...\n"); }
+
+        nanobind::gil_scoped_acquire acquire;
+
+        return tensor;
+    });
+
     m.def("GetFrameGroup", [](cModuleSync* sync) {
         nanobind::gil_scoped_release release;
         //FrameGroup* frameGroup = sync -> GetFrameGroup(); //GetFrameGroupSharedPointer();//
