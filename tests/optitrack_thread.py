@@ -36,7 +36,11 @@ class OptitrackThread(threading.Thread):
         self.camera_entries_array = sorted(self.camera_entries_array, key=lambda x: x.Serial())
         self.camera_serials = []
 
-        for i in range(self.cameras.Count()):
+        self.mode = mode
+        self.exposure = exposure
+        self.delay_strobe = delay_strobe
+
+        for i in range(min(self.cameras.Count(), 4 if self.mode == m.eVideoMode.GrayscaleMode else 256)):
             print("CameraEntry", i, "Parameters:", #UID", camera.UID(), 
                 ", Serial:", self.camera_entries_array[i].Serial(), ", SerialString:", self.camera_entries_array[i].SerialString(),
                 ", Name:", self.camera_entries_array[i].Name(), ", State:", self.camera_entries_array[i].State(), 
@@ -48,11 +52,7 @@ class OptitrackThread(threading.Thread):
                 self.camera_array.append(m.CameraManager.X().GetCamera(self.camera_entries_array[i].UID()))#BySerial(cameraEntry.Serial())
                 self.camera_serials.append(self.camera_entries_array[i].Serial())
                 print("Got Camera: ", i)
-                time.sleep(0.1)
-
-        self.mode = mode
-        self.exposure = exposure
-        self.delay_strobe = delay_strobe
+                time.sleep(0.05)
 
         if self.mode != m.eVideoMode.GrayscaleMode:
             print("Creating Sync Object...")
@@ -73,24 +73,27 @@ class OptitrackThread(threading.Thread):
 
             print("Starting Camera...")
             self.camera_array[i].Start()
-            self.camera_array[i].SetExposure(self.exposure)
-            self.camera_array[i].SetIntensity(5)
-            self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
-            if self.delay_strobe:
-                self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
-                self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+            if self.mode != m.eVideoMode.GrayscaleMode:
+                self.camera_array[i].SetExposure(self.exposure)
+                self.camera_array[i].SetIntensity(5)
+                self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
+                #self.camera_array[i].SetFrameDecimation(1)
+                #self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue())
+                #print("Setting Framerate", self.camera_array[i].MinimumFrameRateValue(), "Current Decimation", self.camera_array[i].FrameDecimation(), "Current Grayscale Decimation", self.camera_array[i].GrayscaleDecimation())
+                #self.camera_array[i].SetFrameRate(self.camera_array[i].MinimumFrameRateValue()//2)
+                if self.delay_strobe:
+                    self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+                    self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+            time.sleep(0.05)
 
         self.camera_serials = np.array(self.camera_serials, dtype=np.int32)
         print("Camera Serials:", self.camera_serials)
-
-        self.sync = m.cModuleSync.Create()
-        for i in range(len(self.camera_array)):
-            self.sync.AddCamera(self.camera_array[i], 0)
 
         self.newFrame = False
 
     def fetch_frame(self):
         if self.mode == m.eVideoMode.GrayscaleMode:
+            time.sleep(0.15)
             new_frame = m.GetSlowFrameArray(self.camera_serials)
         elif self.mode == m.eVideoMode.ObjectMode:
             new_frame = m.GetFrameGroupObjectArray(self.sync)
@@ -105,45 +108,8 @@ class OptitrackThread(threading.Thread):
     def run(self):
         print("Beginning Optitrack Receive Thread!")
 
-        #while(self.should_run and time.time() - self.deadmansSwitch < 6.0):
-        #    #time_ms = (time.perf_counter()-self.t)*(10 ** 3)
-        #    #self.t = time.perf_counter()
-        #    #print("About to retrieve a new frame...")
-        #    if self.mode == m.eVideoMode.GrayscaleMode:
-        #        self.current_frame = m.GetSlowFrameArray(self.camera_serials)
-        #        time.sleep(0.1)
-        #    elif self.mode == m.eVideoMode.MJPEGMode:
-        #        self.current_frame = m.GetFrameGroupArray(self.sync)
-        #        time.sleep(0.001)
-        #    elif self.mode == m.eVideoMode.ObjectMode:
-        #        self.current_frame = m.GetFrameGroupObjectArray(self.sync)
-        #        self.current_frame = np.nan_to_num(self.current_frame, nan=0.0)
-        #        #time.sleep(0.001)
-        #    #print("Retrieved a new frame: ", self.current_frame.shape)
-
         while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
             self.fetch_frame()
-
-    #    if self.mode == m.eVideoMode.ObjectMode:
-    #        new_frame = m.GetFrameGroupObjectArray(sync)
-    #        new_frame = np.nan_to_num(new_frame, nan=0.0)
-    #    else:
-    #        current_framegroup = m.GetFrameGroup(sync)
-    #        new_frame_id = current_framegroup.FrameID()
-    #        if new_frame_id > self.frame_id:
-    #            self.frame_id = new_frame_id
-    #            new_frame = m.GetTensorFromFrameGroup(current_framegroup)
-    #    self.current_frame = new_frame
-    #    #print("Read Frame costs:", ((cv2.getTickCount()/cv2.getTickFrequency()) - t)*1000, "ms")
-
-    #def run(self):
-    #    print("Beginning Optitrack Receive Thread!")
-
-    #    while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
-    #        # Execute the frame fetching operation in another thread??
-    #        if self.thread is not None:
-    #            self.thread.join()
-    #        self.thread = threading.Thread(target=self.fetch_frame, args=(0, self.sync)).start()
 
         if self.sync:
             self.sync.RemoveAllCameras()

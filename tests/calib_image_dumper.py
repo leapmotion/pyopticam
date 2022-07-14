@@ -20,7 +20,7 @@ while(not (keyPressed & 0xFF == ord('q'))):
 
         if (keyPressed & 0xFF == ord('w')):
         #if time.time() > last_time + 1.0:
-            if (image_frame.shape[0] == 8):
+            if (image_frame.shape[0] == 4):
                 for camera_index in range(image_frame.shape[0]):
                     if not os.path.isdir("./calib_images/camera_" + str(camera_index)):
                         os.makedirs("./calib_images/camera_" + str(camera_index))
@@ -39,6 +39,9 @@ while(not (keyPressed & 0xFF == ord('q'))):
         if num_cams == 8:
             image_frame = np.vstack((np.hstack((image_frame[0], image_frame[1], image_frame[2], image_frame[3])),
                                      np.hstack((image_frame[4], image_frame[5], image_frame[6], image_frame[7]))))
+        elif num_cams == 4:
+            image_frame = np.vstack((np.hstack((image_frame[0], image_frame[1])),
+                                     np.hstack((image_frame[2], image_frame[3]))))
         else:
             image_frame = np.reshape(image_frame, (-1, image_frame.shape[2]))
             #image_frame = cv2.resize(image_frame, (int(image_frame.shape[1]//4), int(image_frame.shape[0]//4)))

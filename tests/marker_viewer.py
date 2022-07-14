@@ -33,7 +33,7 @@ while(not (keyPressed & 0xFF == ord('q'))):
                           int(image_frame[camera_index,marker_index, 1]))
                 radius =  int(image_frame[camera_index,marker_index, 2])
                 #print("Drawing Marker", center, radius)
-                cv2.circle(full_image, center, radius, colors[camera_index], -1)
+                cv2.circle(full_image, center, radius, colors[camera_index % len(colors)], -1)
     cv2.imshow("Combined Camera Frames", full_image)
 
     keyPressed = cv2.waitKey(1)
