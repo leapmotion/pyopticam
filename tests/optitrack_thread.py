@@ -13,8 +13,7 @@ class OptitrackThread(threading.Thread):
         self.deadmansSwitch = time.time()
         self.t = 0
         self.current_frame = None #np.zeros((1, 1, 1))
-        
-        self.cameraManager = m.CameraManager.X()
+
         print("Waiting for Cameras to Initialize...")
         m.CameraManager.X().WaitForInitialization()
 
@@ -123,7 +122,7 @@ class OptitrackThread(threading.Thread):
                 self.camera_array[i].Release()
                 print("Released Camera!")
 
-        self.cameraManager.Shutdown()
+        m.CameraManager.X().Shutdown()
 
         print("Exiting Optitrack Camera Thread!")
     def read(self):
