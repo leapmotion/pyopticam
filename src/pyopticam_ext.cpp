@@ -210,6 +210,7 @@ NB_MODULE(pyopticam_ext, m) {
 
 
     m.def("GetFrameGroupObjectArray", [](cModuleSync* sync) {
+        nanobind::gil_scoped_release release;
         //printf("[INFO] Creating Dummy Data!\n");
         // Layout is X, Y, Radius
         float *tracked_object_data = new float[8 * 255 * 3];// { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -217,12 +218,15 @@ NB_MODULE(pyopticam_ext, m) {
         nb::capsule tracked_object_deleter(tracked_object_data, [](void *p) noexcept { delete[] (float *) p; });
         nb::tensor<nb::numpy, float> tensor = nb::tensor<nb::numpy, float>(tracked_object_data, 3, tracked_object_shape, /* owner = */ tracked_object_deleter);
  
+        // Zero out the marker memory
+        for(int i = 0; i < 8 * 255 * 3; i++){ tracked_object_data[i] = 0.0f; }
+
         //printf("[INFO] About to get FrameGroup!\n");
         FrameGroup* frameGroup = sync -> GetFrameGroup();
         //printf("[INFO] Retrieved FrameGroup!\n");
         bool invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
         while(invalid_frame_group){
-            printf("[INFO] Bad Framegroup; Sleeping...\n");
+            //printf("[INFO] Bad Framegroup; Sleeping...\n");
             Sleep(1);
             frameGroup = sync -> GetFrameGroup();
             invalid_frame_group = frameGroup == nullptr || frameGroup->Count() == 0;
@@ -247,10 +251,10 @@ NB_MODULE(pyopticam_ext, m) {
                     int objCount = frame->ObjectCount();
                     //printf("[INFO] Num objects are: %i\n", count);
  
-                    for(int j = 0; j < count; j++){
-                        tracked_object_data[(i*255) + (j * 3) + 0] = frame->Object(j)->X();
-                        tracked_object_data[(i*255) + (j * 3) + 1] = frame->Object(j)->Y();
-                        tracked_object_data[(i*255) + (j * 3) + 2] = frame->Object(j)->Radius();
+                    for(int j = 0; j < objCount; j++){
+                        tracked_object_data[(i * 255 * 3) + (j * 3) + 0] = frame->Object(j)->X();
+                        tracked_object_data[(i * 255 * 3) + (j * 3) + 1] = frame->Object(j)->Y();
+                        tracked_object_data[(i * 255 * 3) + (j * 3) + 2] = frame->Object(j)->Radius();
                     }
                 } else {
                     //printf("[WARNING] Subframe was Empty or Invalid! From camera: %i\n", frame->GetCamera()->Serial());
@@ -261,15 +265,21 @@ NB_MODULE(pyopticam_ext, m) {
             printf("[WARNING] Framegroup is a nullptr or has an invalid number of cameras!\n");
         }
         frameGroup->Release();
+        nanobind::gil_scoped_acquire acquire;
         return tensor;
     });
 
     m.def("GetObjectArrayFromFrameGroup", [](std::shared_ptr<FrameGroup> frameGroup) {
+        nanobind::gil_scoped_release release;
+
         // Layout is X, Y, Radius
         float *tracked_object_data = new float[8 * 255 * 3];// { 1, 2, 3, 4, 5, 6, 7, 8 };
         size_t tracked_object_shape[3] = { 8, 255, 3 };
         nb::capsule tracked_object_deleter (tracked_object_data, [](void *p) noexcept { delete[] (float *) p; });
         nb::tensor<nb::numpy, float> tensor = nb::tensor<nb::numpy, float>(tracked_object_data, 3, tracked_object_shape, /* owner = */ tracked_object_deleter);
+
+        // Zero out the marker memory
+        for(int i = 0; i < 8 * 255 * 3; i++){ tracked_object_data[i] = 0.0f; }
 
         if(frameGroup && frameGroup != nullptr && frameGroup->Count() > 0 ){
             int count = frameGroup->Count();
@@ -282,10 +292,10 @@ NB_MODULE(pyopticam_ext, m) {
                     int objCount = frame->ObjectCount();
                     printf("[INFO] Num objects are: %i\n", count);
  
-                    for(int j = 0; j < count; j++){
-                        tracked_object_data[(i*255) + (j * 3) + 0] = frame->Object(j)->X();
-                        tracked_object_data[(i*255) + (j * 3) + 1] = frame->Object(j)->Y();
-                        tracked_object_data[(i*255) + (j * 3) + 2] = frame->Object(j)->Radius();
+                    for(int j = 0; j < objCount; j++){
+                        tracked_object_data[(i * 255 * 3) + (j * 3) + 0] = frame->Object(j)->X();
+                        tracked_object_data[(i * 255 * 3) + (j * 3) + 1] = frame->Object(j)->Y();
+                        tracked_object_data[(i * 255 * 3) + (j * 3) + 2] = frame->Object(j)->Radius();
                     }
                 } else {
                     //printf("[WARNING] Subframe was Empty or Invalid! From camera: %i\n", frame->GetCamera()->Serial());
@@ -296,6 +306,7 @@ NB_MODULE(pyopticam_ext, m) {
             printf("[WARNING] Framegroup is a nullptr or has an invalid number of cameras!\n");
         }
         frameGroup->Release();
+        nanobind::gil_scoped_acquire acquire;
         return tensor;
     });
 
@@ -395,13 +406,13 @@ NB_MODULE(pyopticam_ext, m) {
             frameGroup = sync->GetFrameGroupSharedPtr();
             invalid_frame_group = !frameGroup || frameGroup == nullptr || frameGroup->Count() == 0;
 
-            if(invalid_frame_group){
-                if(frameGroup == nullptr){
-                    printf("[INFO] FrameGroup is Null!\n");
-                } else {
-                    printf("[INFO] FrameGroup has %i frames\n", frameGroup->Count());
-                }
-            }
+            //if(invalid_frame_group){
+            //    if(frameGroup == nullptr){
+            //        printf("[INFO] FrameGroup is Null!\n");
+            //    } else {
+            //        printf("[INFO] FrameGroup has %i frames\n", frameGroup->Count());
+            //    }
+            //}
         }
         nanobind::gil_scoped_acquire acquire;
         return frameGroup;

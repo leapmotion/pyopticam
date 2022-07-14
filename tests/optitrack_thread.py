@@ -12,7 +12,7 @@ class OptitrackThread(threading.Thread):
         self.should_run = True
         self.deadmansSwitch = time.time()
         self.t = 0
-        self.current_frame = np.zeros((1, 1, 1))
+        self.current_frame = None #np.zeros((1, 1, 1))
         
         self.cameraManager = m.CameraManager.X()
         print("Waiting for Cameras to Initialize...")
@@ -54,52 +54,42 @@ class OptitrackThread(threading.Thread):
             #print("Camera", i, "Parameters: Name", self.camera_array[i].Name() , ", Framerate:", self.camera_array[i].FrameRate(), 
             #      ", Exposure:" , self.camera_array[i].Exposure(), ", Threshold:", self.camera_array[i].Threshold(), 
             #      ", Intensity:", self.camera_array[i].Intensity(),", CameraID:" , self.camera_array[i].CameraID())
-            #self.camera_array[i].SetStatusRingRGB(0, 255, 0)
+            self.camera_array[i].SetStatusRingRGB(0, 255, 0)
 
             print("Setting", self.mode)
             self.camera_array[i].SetVideoType(self.mode) # and GrayscaleMode work
 
             print("Starting Camera...")
             self.camera_array[i].Start()
-            #self.camera_array[i].SetExposure(self.exposure)
-            #self.camera_array[i].SetIntensity(5)
-            #self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
-            #if self.delay_strobe:
-            #    self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
-            #    self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+            self.camera_array[i].SetExposure(self.exposure)
+            self.camera_array[i].SetIntensity(5)
+            self.camera_array[i].SetImagerGain(m.eImagerGain.Gain_Level7)
+            if self.delay_strobe:
+                self.camera_array[i].SetShutterDelay(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
+                self.camera_array[i].SetStrobeOffset(int(self.exposure * 1.2 * i)) # Keep the cameras from firing into eachother?
 
         self.sync = m.cModuleSync.Create()
         for i in range(len(self.camera_array)):
             self.sync.AddCamera(self.camera_array[i], 0)
 
         self.newFrame = False
-        self.thread = None
-        self.frame_id = 0
-        #self.new_frame_id = 0
 
-    def fetch_frame(self, garb, sync):
-        #t = cv2.getTickCount()/cv2.getTickFrequency()
-        current_framegroup = m.GetFrameGroup(sync)
-        new_frame_id = current_framegroup.FrameID()
-        if new_frame_id > self.frame_id:
-            self.frame_id = new_frame_id
-            if self.mode == m.eVideoMode.ObjectMode:
-                new_frame = m.GetObjectArrayFromFrameGroup(current_framegroup)
-                new_frame = np.nan_to_num(new_frame, nan=0.0)
-            else:
-                new_frame = m.GetTensorFromFrameGroup(current_framegroup)
-            self.current_frame = new_frame
-        #print("Read Frame costs:", ((cv2.getTickCount()/cv2.getTickFrequency()) - t)*1000, "ms")
+    def fetch_frame(self):
+        if self.mode == m.eVideoMode.ObjectMode:
+            new_frame = m.GetFrameGroupObjectArray(self.sync)
+            new_frame = np.nan_to_num(new_frame, nan=0.0)
+        else:
+            current_framegroup = m.GetFrameGroup(self.sync)
+            new_frame = np.zeros((current_framegroup.Count(), 512, 640), dtype=np.uint8)
+            m.FillTensorFromFrameGroup(current_framegroup, new_frame)
+        self.current_frame = new_frame
+        self.newFrame = True
 
     def run(self):
         print("Beginning Optitrack Receive Thread!")
 
         while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
-            # Have Numpy handle Allocating the array
-            frame_group = m.GetFrameGroup(self.sync)
-            self.current_frame = np.zeros((frame_group.Count(), 512, 640), dtype=np.uint8)
-            m.FillTensorFromFrameGroup(frame_group, self.current_frame)
-            self.newFrame = True
+            self.fetch_frame()
 
         self.sync.RemoveAllCameras()
         m.cModuleSync.Destroy(self.sync)
@@ -123,4 +113,3 @@ class OptitrackThread(threading.Thread):
     def stop(self):
         '''Ends the video receiving thread'''
         self.should_run = False
-        self.thread.join()
