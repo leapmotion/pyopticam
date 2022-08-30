@@ -1,7 +1,9 @@
 pyopticam
 ================
 
-This repository contains yet another Python wrapper for the [Optitrack Camera SDK](https://optitrack.com/software/camera-sdk/) using [nanobind](https://github.com/wjakob/nanobind).  Requires python >= 3.8.   This has only ever been tested with Prime 13W's; different cameras may need some of the hard-coded resolution assumptions updated.
+This repository contains yet another Python wrapper for the [Optitrack Camera SDK](https://optitrack.com/software/camera-sdk/) using [nanobind](https://github.com/wjakob/nanobind).  It exposes a wide variety of camera manipulation functions, as well as GIL-friendly video and marker retrieval functions for use with `numpy`.
+
+Requires python >= 3.8.   This has only ever been tested with [Prime 13W](https://optitrack.com/cameras/prime-13w/)'s; different cameras may need some of the hard-coded resolution assumptions updated.
 
 Installation
 ------------
