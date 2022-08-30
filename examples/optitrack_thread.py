@@ -40,7 +40,9 @@ class OptitrackThread(threading.Thread):
         self.delay_strobe = delay_strobe
         self.framerate = framerate
 
-        for i in range(min(self.cameras.Count(), 4 if self.mode == m.eVideoMode.GrayscaleMode else 256)):
+        # The limit to 4 grayscale cameras here is based on a 1 gigabit switch; 10 gigabit switches may support more
+        num_cameras_to_enumerate = min(self.cameras.Count(), 4 if self.mode == m.eVideoMode.GrayscaleMode else 256)
+        for i in range(num_cameras_to_enumerate):
             print("CameraEntry", i, "Parameters:", #UID", camera.UID(), 
                 ", Serial:", self.camera_entries_array[i].Serial(), ", SerialString:", self.camera_entries_array[i].SerialString(),
                 ", Name:", self.camera_entries_array[i].Name(), ", State:", self.camera_entries_array[i].State(), 
@@ -96,7 +98,7 @@ class OptitrackThread(threading.Thread):
 
     def fetch_frame(self):
         if self.mode == m.eVideoMode.GrayscaleMode:
-            time.sleep(0.15)
+            time.sleep(0.15) # This sleep appears to be necessary to allow the cameras to retrieve frames
             new_frame = m.GetSlowFrameArray(self.camera_serials)
         elif self.mode == m.eVideoMode.ObjectMode:
             new_frame = m.GetFrameGroupObjectArray(self.sync)
