@@ -10,3 +10,9 @@ build
 cam
 *.png
 *.mp4
+calib_images*
+*.json
+Rigel*
+Europa*
+local*
+*.dll
