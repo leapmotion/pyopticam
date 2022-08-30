@@ -4,7 +4,8 @@ import numpy as np
 import pyopticam
 import optitrack_thread
 
-# A simple example for viewing marker data from your optitrack cameras
+# A simple example for viewing retroreflective marker data from your optitrack cameras
+# Press `q` to quit
 
 min_size = 1 # 5
 max_size = 100000
@@ -12,7 +13,7 @@ max_size = 100000
 optitrack = optitrack_thread.OptitrackThread(mode=pyopticam.eVideoMode.ObjectMode, delay_strobe=True)
 optitrack.start()
 
-full_image = np.zeros((1024, 1280, 3), dtype=np.uint8)
+full_image = np.zeros((1024, 1280, 3), dtype=np.uint8) # Hard-coded marker resolution
 colors = [(255, 0,   0), (  0, 255, 0), (  0, 0, 255), (255, 255,   0), (0, 255, 255), 
           (255, 0, 255), (255, 127, 0), (127, 0, 255), (127,   0, 127)]
 
