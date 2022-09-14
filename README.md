@@ -8,9 +8,9 @@ Requires python >= 3.8.   This has only ever been tested with [Prime 13W](https:
 Installation
 ------------
 
-0. Ensure that you have the [Optitrack Camera SDK](https://optitrack.com/software/camera-sdk/) installed to: `C:/Program Files (x86)/OptiTrack/Camera SDK`
+0. Ensure that you have the [pip prerequisites](https://github.com/leapmotion/pyopticam/blob/main/pyproject.toml) [Optitrack Camera SDK](https://optitrack.com/software/camera-sdk/) installed to: `C:/Program Files (x86)/OptiTrack/Camera SDK`
 1. Clone this repository
-2. Navigate to the top-level `pyopticam` directory and run `pip install -e .`
+2. Navigate to the top-level `pyopticam` directory and run `pip install .`
 3. Find `C:/Program Files (x86)/OptiTrack/Camera SDK/lib/CameraLibrary2015x64S.dll` and copy it to `pyopticam/src/pyopticam`
 
 Afterwards, make sure your Optitrack cameras are accessible on the network, and try the `video_viewer.py` or the `marker_viewer.py` example.
