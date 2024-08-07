@@ -12,7 +12,7 @@ Installation
 2. Install the [Optitrack Camera SDK](https://optitrack.com/software/camera-sdk/) to: `C:/Program Files (x86)/OptiTrack/Camera SDK`
 3. Clone this repository
 4. Navigate to the top-level `pyopticam` directory and run `pip install -e . ` (Do not upgrade pip, use pip version `21.1.1`)
-5. Find `C:/Program Files (x86)/OptiTrack/Camera SDK/lib/CameraLibrary2015x64S.dll` and copy it to `pyopticam/src/pyopticam`
+5. Find `C:/Program Files (x86)/OptiTrack/CameraSDK/lib/CameraLibrary2019x64S.dll` and copy it to `pyopticam/src/pyopticam`
 
 Afterwards, make sure your Optitrack cameras are accessible on the network, and try the `video_viewer.py` or the `marker_viewer.py` example.
 

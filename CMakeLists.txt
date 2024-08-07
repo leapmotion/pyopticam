@@ -45,6 +45,6 @@ nanobind_add_module(
   NB_STATIC # Build static libnanobind (the extension module itself remains a shared library)
   src/pyopticam_ext.cpp
 )
-target_link_libraries(pyopticam_ext PRIVATE "C:/Program Files (x86)/OptiTrack/Camera SDK/lib/CameraLibrary2015x64S.lib")
+target_link_libraries(pyopticam_ext PRIVATE "C:/Program Files (x86)/OptiTrack/CameraSDK/lib/CameraLibrary2019x64S.lib")
 
 install(TARGETS pyopticam_ext LIBRARY DESTINATION .)

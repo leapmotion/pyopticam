@@ -60,7 +60,7 @@ class OptitrackThread(threading.Thread):
             print("Creating Sync Object...")
             self.sync = m.cModuleSync.Create()
             for i in range(len(self.camera_array)):
-                self.sync.AddCamera(self.camera_array[i], 0)
+                self.sync.AddCamera(self.camera_array[i])
         else:
             self.sync = None
 
@@ -105,16 +105,18 @@ class OptitrackThread(threading.Thread):
             new_frame = np.nan_to_num(new_frame, nan=0.0)
         else:
             current_framegroup = m.GetFrameGroup(self.sync)
-            new_frame = np.zeros((current_framegroup.Count(), 512, 640), dtype=np.uint8)
-            m.FillTensorFromFrameGroup(current_framegroup, new_frame)
+            new_frame = np.zeros((current_framegroup.Count(), self.camera_array[0].Height(), self.camera_array[0].Width()), dtype=np.uint8)
+            m.FillTensorFromFrameGroup(self.camera_array[0], current_framegroup, new_frame)
         self.current_frame = new_frame
         self.newFrame = True
 
     def run(self):
         print("Beginning Optitrack Receive Thread!")
 
-        while(self.should_run and time.time() - self.deadmansSwitch < 4.0):
+        while(self.should_run):# and time.time() - self.deadmansSwitch < 6.0):
             self.fetch_frame()
+
+        print("Should Run:", self.should_run, "Deadman Switch:", time.time() - self.deadmansSwitch)
 
         if self.sync:
             self.sync.RemoveAllCameras()
@@ -124,9 +126,9 @@ class OptitrackThread(threading.Thread):
             if self.camera_array[i].State() == m.eCameraState.Initialized:
                 print("Stopping Camera", i, "...")
                 #camera_array[i].Stop(True)
-                print("Stopped Camera", i," Releasing Camera...")
-                self.camera_array[i].Release()
-                print("Released Camera!")
+                print("Stopped Camera", i)#" Releasing Camera...")
+                #self.camera_array[i].Release()
+                #print("Released Camera!")
 
         m.CameraManager.X().Shutdown()
 

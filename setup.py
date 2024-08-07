@@ -12,7 +12,7 @@ except ImportError:
 
 setup(
     name="pyopticam",
-    version="0.0.1",
+    version="0.0.2",
     author="Johnathon Selstad",
     author_email="john.selstad@ultraleap.com",
     description="A nanobind wrapper for NaturalPoint's Optitrack Camera SDK",

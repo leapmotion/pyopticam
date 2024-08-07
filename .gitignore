@@ -16,3 +16,5 @@ Rigel*
 Europa*
 local*
 *.dll
+.venv
+.vs
